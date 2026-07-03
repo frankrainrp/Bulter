@@ -2,13 +2,14 @@ import { z } from "zod";
 import { ChatMessageModel } from "../models/ChatMessageModel.js";
 import { ChatSessionModel } from "../models/ChatSessionModel.js";
 
-// 聊天消息里附带的文件元数据。
-// 后端只保存文件 id/name/size/mime 这种轻量索引，不在聊天历史里重复保存二进制内容。
+// 聊天消息里附带的文件索引。
+// 原始二进制内容由 storage bucket 保存，聊天历史只保存可恢复的 blobId 和展示元数据。
 const StoredFileSchema = z.object({
   id: z.string(),
   name: z.string().optional().default(""),
   size: z.number().optional().default(0),
   mime: z.string().optional().default("application/octet-stream"),
+  blobId: z.string().optional(),
 });
 
 // 前端本地会话的服务端持久化形状。
@@ -92,6 +93,7 @@ export async function ReplaceChatHistory(input: unknown) {
         name: file.name,
         size: file.size,
         mime: file.mime,
+        blobId: file.blobId,
       })),
       reasoning: item.reasoning,
       isError: item.isError,

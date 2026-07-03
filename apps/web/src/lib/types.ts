@@ -9,6 +9,7 @@ export interface UploadedFile {
   name: string;
   size: number;
   mime: string;
+  blobId?: string;
   file?: File; // 真实 File 对象，客户端 only，不序列化
 }
 

@@ -147,11 +147,42 @@ function UserBubble({ msg }: { msg: ChatMessage }) {
 }
 
 function UserFileChip({ file }: { file: UploadedFile }) {
+  const { t } = useT();
+  const [loading, setLoading] = useState(false);
   const isImage = file.mime.startsWith("image/");
   const isPdf = file.mime === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
   const Icon = isImage ? ImageIcon : isPdf ? FileText : FileIcon;
+  const canDownload = Boolean(file.blobId);
+
+  const downloadStoredFile = async () => {
+    if (!file.blobId || loading) return;
+    setLoading(true);
+    try {
+      const { getBlobUrl } = await import("@/lib/blobs");
+      const info = await getBlobUrl(file.blobId);
+      if (!info) return;
+      const link = document.createElement("a");
+      link.href = info.url;
+      link.download = info.name;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(info.url), 1000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
+      role={canDownload ? "button" : undefined}
+      tabIndex={canDownload ? 0 : undefined}
+      title={canDownload ? t("att.download") : undefined}
+      onClick={downloadStoredFile}
+      onKeyDown={(event) => {
+        if (canDownload && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          void downloadStoredFile();
+        }
+      }}
       style={{
         display: "flex",
         alignItems: "center",
@@ -163,6 +194,8 @@ function UserFileChip({ file }: { file: UploadedFile }) {
         fontSize: 11,
         color: "var(--color-text)",
         maxWidth: 220,
+        cursor: canDownload ? "pointer" : "default",
+        opacity: loading ? 0.72 : 1,
       }}
     >
       <Icon size={12} color="var(--color-primary)" style={{ flexShrink: 0 }} />

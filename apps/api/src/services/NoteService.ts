@@ -9,6 +9,7 @@ export const NoteInputSchema = z.object({
   tags: z.array(z.string()).optional(),
   pinned: z.boolean().optional(),
   syncedTodos: z.array(z.string()).optional(),
+  vaultPath: z.string().optional(),
 });
 
 export const NoteUpdateSchema = NoteInputSchema.partial();

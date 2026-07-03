@@ -107,12 +107,13 @@ The Express backend owns these core data areas:
 - tasks
 - notes
 - chat sessions and chat messages
+- task attachment references and storage-backed file blobs
 - custom panels
 - recurring tasks
 - storage records for blobs, custom assets, and wallpapers
 - AI helper routes for chat, OCR, research, panel generation, source generation, connector proxy, and DDL extraction
 
-Browser `localStorage` remains only for UI preferences and lightweight client settings such as theme, language, model selection, onboarding state, and quota-demo counters.
+Browser `localStorage` remains only for UI preferences and demo-only client settings such as theme, language, model selection, onboarding state, streak/achievement UI state, and billing/credits/usage demo counters.
 
 ## Team Ownership Summary
 

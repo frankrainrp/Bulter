@@ -7,6 +7,7 @@ export type NoteDoc = {
   tags: string[];
   pinned: boolean;
   syncedTodos: string[];
+  vaultPath?: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -19,6 +20,7 @@ const NoteSchema = new Schema<NoteDoc>(
     tags: { type: [String], default: [] },
     pinned: { type: Boolean, default: false },
     syncedTodos: { type: [String], default: [] },
+    vaultPath: { type: String, default: undefined },
   },
   { timestamps: true },
 );

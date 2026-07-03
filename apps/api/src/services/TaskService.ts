@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { TaskModel } from "../models/TaskModel.js";
 
+const TaskAttachmentSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["url", "filepath", "blob"]),
+  label: z.string().min(1),
+  ref: z.string().min(1),
+  mime: z.string().optional(),
+  size: z.number().optional(),
+});
+
 export const TaskInputSchema = z.object({
   id: z.string().optional(),
   clientId: z.string().optional(),
@@ -16,7 +25,9 @@ export const TaskInputSchema = z.object({
   tags: z.array(z.string()).optional(),
   priority: z.enum(["low", "med", "high"]).optional(),
   notes: z.string().optional(),
+  attachments: z.array(TaskAttachmentSchema).optional(),
   noteId: z.string().nullable().optional(),
+  recurringId: z.string().optional(),
 });
 
 export const TaskUpdateSchema = TaskInputSchema.partial();

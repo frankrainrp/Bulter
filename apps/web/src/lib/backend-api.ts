@@ -24,7 +24,16 @@ export type ApiTask = {
   tags: string[];
   priority: "low" | "med" | "high";
   notes: string;
+  attachments?: Array<{
+    id: string;
+    kind: "url" | "filepath" | "blob";
+    label: string;
+    ref: string;
+    mime?: string;
+    size?: number;
+  }>;
   noteId: string | null;
+  recurringId?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -36,6 +45,7 @@ export type ApiNote = {
   tags: string[];
   pinned: boolean;
   syncedTodos: string[];
+  vaultPath?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -64,6 +74,7 @@ export type ApiChatMessage = {
     name: string;
     size: number;
     mime: string;
+    blobId?: string;
   }>;
   reasoning?: string;
   isError?: boolean;

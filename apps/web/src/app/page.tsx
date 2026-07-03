@@ -304,6 +304,7 @@ function ButlerApp() {
           name: file.name,
           size: file.size,
           mime: file.mime,
+          blobId: file.blobId,
         })),
         reasoning: m.reasoning,
         isError: m.isError,
@@ -351,6 +352,16 @@ function ButlerApp() {
 
   const handleRemoveAttachment = useCallback((id: string) => {
     setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
+  const persistChatFiles = useCallback(async (files: UploadedFile[]) => {
+    if (files.length === 0) return files;
+    const { saveBlob } = await import("@/lib/blobs");
+    return Promise.all(files.map(async (file) => {
+      if (file.blobId || !file.file) return file;
+      const stored = await saveBlob(file.file);
+      return { ...file, blobId: stored.id };
+    }));
   }, []);
 
   // ---------- 真实处理流（PDF → 客户端解析 → V4 Flash 提取 → 落 state） ----------
@@ -676,7 +687,13 @@ function ButlerApp() {
       return;
     }
 
-    const filesSnapshot = attachedFiles;
+    let filesSnapshot: UploadedFile[];
+    try {
+      filesSnapshot = await persistChatFiles(attachedFiles);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save attachment.");
+      return;
+    }
 
     // 1. 用户消息入栈
     const userUiMsg: ChatMessage = {
@@ -815,7 +832,7 @@ function ButlerApp() {
       currentBatchIdRef.current = null;
       abortRef.current = null;
     }
-  }, [inputValue, attachedFiles, isLoading, messages, runRealPipeline, executeToolCall, buildContextSummary, touchActiveSession, selectedModel, toast]);
+  }, [inputValue, attachedFiles, isLoading, messages, persistChatFiles, runRealPipeline, executeToolCall, buildContextSummary, touchActiveSession, selectedModel, toast]);
 
   // 停止生成：触发当前 AbortController.abort()；finally 会自动清理状态
   const handleStopGeneration = useCallback(() => {

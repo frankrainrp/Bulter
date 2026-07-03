@@ -3,6 +3,15 @@ import mongoose, { Schema } from "mongoose";
 export type TaskStatus = "todo" | "in_progress" | "done";
 export type TaskPriority = "low" | "med" | "high";
 
+export type TaskAttachmentDoc = {
+  id: string;
+  kind: "url" | "filepath" | "blob";
+  label: string;
+  ref: string;
+  mime?: string;
+  size?: number;
+};
+
 export type TaskDoc = {
   clientId: string;
   taskName: string;
@@ -17,10 +26,24 @@ export type TaskDoc = {
   tags: string[];
   priority: TaskPriority;
   notes: string;
+  attachments: TaskAttachmentDoc[];
   noteId: string | null;
+  recurringId?: string;
   createdAt: Date;
   updatedAt: Date;
 };
+
+const TaskAttachmentSchema = new Schema<TaskAttachmentDoc>(
+  {
+    id: { type: String, required: true },
+    kind: { type: String, enum: ["url", "filepath", "blob"], required: true },
+    label: { type: String, required: true, trim: true },
+    ref: { type: String, required: true },
+    mime: { type: String, default: undefined },
+    size: { type: Number, default: undefined },
+  },
+  { _id: false },
+);
 
 const TaskSchema = new Schema<TaskDoc>(
   {
@@ -37,7 +60,9 @@ const TaskSchema = new Schema<TaskDoc>(
     tags: { type: [String], default: [] },
     priority: { type: String, enum: ["low", "med", "high"], default: "med" },
     notes: { type: String, default: "" },
+    attachments: { type: [TaskAttachmentSchema], default: [] },
     noteId: { type: String, default: null },
+    recurringId: { type: String, default: undefined },
   },
   { timestamps: true },
 );

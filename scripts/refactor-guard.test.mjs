@@ -232,6 +232,31 @@ test("chat history is persisted through Express and MongoDB", () => {
   assert.doesNotMatch(page, /butler\.sessions|butler\.messages|readLocalJson|writeLocalJson/);
 });
 
+test("user content fields survive MongoDB persistence schemas", () => {
+  const taskModel = ReadText("apps/api/src/models/TaskModel.ts");
+  const taskService = ReadText("apps/api/src/services/TaskService.ts");
+  const noteModel = ReadText("apps/api/src/models/NoteModel.ts");
+  const noteService = ReadText("apps/api/src/services/NoteService.ts");
+  const chatModel = ReadText("apps/api/src/models/ChatMessageModel.ts");
+  const chatService = ReadText("apps/api/src/services/ChatHistoryService.ts");
+  const page = ReadText("apps/web/src/app/page.tsx");
+
+  assert.match(taskModel, /TaskAttachmentSchema/);
+  assert.match(taskModel, /attachments:\s*\{\s*type:\s*\[TaskAttachmentSchema\]/);
+  assert.match(taskModel, /recurringId:\s*\{\s*type:\s*String/);
+  assert.match(taskService, /attachments:\s*z\.array\(TaskAttachmentSchema\)\.optional\(\)/);
+  assert.match(taskService, /recurringId:\s*z\.string\(\)\.optional\(\)/);
+
+  assert.match(noteModel, /vaultPath:\s*\{\s*type:\s*String/);
+  assert.match(noteService, /vaultPath:\s*z\.string\(\)\.optional\(\)/);
+
+  assert.match(chatModel, /blobId\?:\s*string/);
+  assert.match(chatService, /blobId:\s*z\.string\(\)\.optional\(\)/);
+  assert.match(chatService, /blobId:\s*file\.blobId/);
+  assert.match(page, /saveBlob\(file\.file\)/);
+  assert.match(page, /blobId:\s*file\.blobId/);
+});
+
 test("docs do not describe the transformed project as still using old core storage", () => {
   const docs = [
     "README.md",

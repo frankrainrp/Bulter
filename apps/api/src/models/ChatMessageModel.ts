@@ -5,6 +5,7 @@ export type StoredUploadedFile = {
   name: string;
   size: number;
   mime: string;
+  blobId?: string;
 };
 
 export type ChatMessageDoc = {
@@ -26,6 +27,7 @@ const StoredUploadedFileSchema = new Schema<StoredUploadedFile>(
     name: { type: String, default: "" },
     size: { type: Number, default: 0 },
     mime: { type: String, default: "application/octet-stream" },
+    blobId: { type: String, default: undefined },
   },
   { _id: false },
 );
