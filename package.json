@@ -1,0 +1,27 @@
+{
+  "name": "c270-fa-refactor",
+  "private": true,
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/frankrainrp/Bulter.git"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter c270-fa-agent-api --filter @smart-hub/web dev",
+    "dev:api": "pnpm --filter c270-fa-agent-api dev",
+    "dev:web": "pnpm --filter @smart-hub/web dev",
+    "build": "pnpm --filter c270-fa-agent-api build && pnpm --filter @smart-hub/web build",
+    "build:api": "pnpm --filter c270-fa-agent-api build",
+    "build:web": "pnpm --filter @smart-hub/web build",
+    "test": "node --test scripts/*.test.mjs",
+    "test:refactor": "node --test scripts/refactor-guard.test.mjs",
+    "test:runtime": "pnpm build:api && node scripts/runtime-smoke.mjs",
+    "test:all": "pnpm test && pnpm build",
+    "typecheck": "pnpm --filter c270-fa-agent-api build",
+    "clean": "node scripts/CleanGenerated.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

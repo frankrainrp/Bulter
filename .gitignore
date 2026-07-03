@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+.turbo/
+.env
+.env.local
+apps/web/data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+npm-debug.log*
+pnpm-debug.log*
+logs/
+.runtime-logs/

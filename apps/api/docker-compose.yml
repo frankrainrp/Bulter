@@ -1,0 +1,13 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: c270-fa-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - c270-fa-mongo-data:/data/db
+
+volumes:
+  c270-fa-mongo-data:
+
