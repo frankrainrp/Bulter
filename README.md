@@ -95,9 +95,10 @@ Full local verification:
 ```powershell
 pnpm test:all
 pnpm test:runtime
+pnpm test:persistence
 ```
 
-`pnpm test:runtime` requires MongoDB to be reachable.
+`pnpm test:runtime` and `pnpm test:persistence` require MongoDB to be reachable.
 
 ## Core Data Ownership
 

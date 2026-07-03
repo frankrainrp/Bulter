@@ -16,6 +16,7 @@
     "test": "node --test scripts/*.test.mjs",
     "test:refactor": "node --test scripts/refactor-guard.test.mjs",
     "test:runtime": "pnpm build:api && node scripts/runtime-smoke.mjs",
+    "test:persistence": "pnpm build:api && node scripts/persistence-format-smoke.mjs",
     "test:all": "pnpm test && pnpm build",
     "typecheck": "pnpm --filter c270-fa-agent-api build",
     "clean": "node scripts/CleanGenerated.mjs"

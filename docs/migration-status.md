@@ -50,6 +50,7 @@ pnpm build:web
 pnpm build
 pnpm test:all
 pnpm test:runtime
+pnpm test:persistence
 ```
 
 ## Verification Record
