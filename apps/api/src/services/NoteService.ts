@@ -17,41 +17,42 @@ export const NoteUpdateSchema = NoteInputSchema.partial();
 export type NoteInput = z.infer<typeof NoteInputSchema>;
 export type NoteUpdate = z.infer<typeof NoteUpdateSchema>;
 
-export async function AddNote(input: NoteInput) {
+export async function AddNote(ownerId: string, input: NoteInput) {
   const data = NoteInputSchema.parse(input);
-  const note = await NoteModel.create({ ...data, clientId: data.clientId || data.id || NewClientId() });
+  const note = await NoteModel.create({ ...data, ownerId, clientId: data.clientId || data.id || NewClientId() });
   return ReadNoteDto(note);
 }
 
-export async function GetNoteList() {
-  const notes = await NoteModel.find().sort({ pinned: -1, updatedAt: -1 });
+export async function GetNoteList(ownerId: string) {
+  const notes = await NoteModel.find({ ownerId }).sort({ pinned: -1, updatedAt: -1 });
   return notes.map(ReadNoteDto);
 }
 
-export async function GetNoteById(id: string) {
-  const note = await NoteModel.findOne({ clientId: id });
+export async function GetNoteById(ownerId: string, id: string) {
+  const note = await NoteModel.findOne({ ownerId, clientId: id });
   return note ? ReadNoteDto(note) : null;
 }
 
-export async function UpdateNote(id: string, input: NoteUpdate) {
+export async function UpdateNote(ownerId: string, id: string, input: NoteUpdate) {
   const data = NoteUpdateSchema.parse(input);
-  const note = await NoteModel.findOneAndUpdate({ clientId: id }, data, { new: true });
+  const note = await NoteModel.findOneAndUpdate({ ownerId, clientId: id }, data, { new: true });
   return note ? ReadNoteDto(note) : null;
 }
 
-export async function DeleteNote(id: string) {
-  const note = await NoteModel.findOneAndDelete({ clientId: id });
+export async function DeleteNote(ownerId: string, id: string) {
+  const note = await NoteModel.findOneAndDelete({ ownerId, clientId: id });
   return note ? ReadNoteDto(note) : null;
 }
 
-export async function ReplaceNoteList(inputs: NoteInput[]) {
+export async function ReplaceNoteList(ownerId: string, inputs: NoteInput[]) {
   const items = z.array(NoteInputSchema).parse(inputs);
-  await NoteModel.deleteMany({});
+  await NoteModel.deleteMany({ ownerId });
   if (items.length === 0) return [];
 
   const docs = await NoteModel.insertMany(
     items.map((item) => ({
       ...item,
+      ownerId,
       clientId: item.clientId || item.id || NewClientId(),
     })),
   );
@@ -60,7 +61,7 @@ export async function ReplaceNoteList(inputs: NoteInput[]) {
 
 function ReadNoteDto(note: { toObject: () => Record<string, unknown> }) {
   const raw = note.toObject();
-  const { _id, __v, clientId, ...rest } = raw;
+  const { _id, __v, ownerId, clientId, ...rest } = raw;
   return {
     id: String(clientId),
     ...rest,

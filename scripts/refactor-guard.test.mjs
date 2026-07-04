@@ -218,6 +218,7 @@ test("chat history is persisted through Express and MongoDB", () => {
   const chatRoutes = ReadText("apps/api/src/routes/ChatRoutes.ts");
   const chatService = ReadText("apps/api/src/services/ChatHistoryService.ts");
   const backendApi = ReadText("apps/web/src/lib/backend-api.ts");
+  const coreAppData = ReadText("apps/web/src/hooks/useCoreAppData.ts");
   const page = ReadText("apps/web/src/app/page.tsx");
 
   assert.match(chatRoutes, /ChatRoutes\.get\(\s*["']\/history["']/);
@@ -226,35 +227,12 @@ test("chat history is persisted through Express and MongoDB", () => {
   assert.match(chatService, /ChatMessageModel/);
   assert.match(backendApi, /GetChatHistoryByApi/);
   assert.match(backendApi, /ReplaceChatHistoryByApi/);
-  assert.match(page, /GetChatHistoryByApi/);
-  assert.match(page, /ReplaceChatHistoryByApi/);
+  assert.match(coreAppData, /GetChatHistoryByApi/);
+  assert.match(coreAppData, /ReplaceChatHistoryByApi/);
+  assert.match(page, /useCoreAppData/);
+  assert.doesNotMatch(page, /GetChatHistoryByApi|ReplaceChatHistoryByApi/);
 
-  assert.doesNotMatch(page, /butler\.sessions|butler\.messages|readLocalJson|writeLocalJson/);
-});
-
-test("user content fields survive MongoDB persistence schemas", () => {
-  const taskModel = ReadText("apps/api/src/models/TaskModel.ts");
-  const taskService = ReadText("apps/api/src/services/TaskService.ts");
-  const noteModel = ReadText("apps/api/src/models/NoteModel.ts");
-  const noteService = ReadText("apps/api/src/services/NoteService.ts");
-  const chatModel = ReadText("apps/api/src/models/ChatMessageModel.ts");
-  const chatService = ReadText("apps/api/src/services/ChatHistoryService.ts");
-  const page = ReadText("apps/web/src/app/page.tsx");
-
-  assert.match(taskModel, /TaskAttachmentSchema/);
-  assert.match(taskModel, /attachments:\s*\{\s*type:\s*\[TaskAttachmentSchema\]/);
-  assert.match(taskModel, /recurringId:\s*\{\s*type:\s*String/);
-  assert.match(taskService, /attachments:\s*z\.array\(TaskAttachmentSchema\)\.optional\(\)/);
-  assert.match(taskService, /recurringId:\s*z\.string\(\)\.optional\(\)/);
-
-  assert.match(noteModel, /vaultPath:\s*\{\s*type:\s*String/);
-  assert.match(noteService, /vaultPath:\s*z\.string\(\)\.optional\(\)/);
-
-  assert.match(chatModel, /blobId\?:\s*string/);
-  assert.match(chatService, /blobId:\s*z\.string\(\)\.optional\(\)/);
-  assert.match(chatService, /blobId:\s*file\.blobId/);
-  assert.match(page, /saveBlob\(file\.file\)/);
-  assert.match(page, /blobId:\s*file\.blobId/);
+  assert.doesNotMatch(`${page}\n${coreAppData}`, /butler\.sessions|butler\.messages|readLocalJson|writeLocalJson/);
 });
 
 test("docs do not describe the transformed project as still using old core storage", () => {

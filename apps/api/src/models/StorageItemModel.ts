@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
 export type StorageItemDoc = {
+  ownerId: string;
   bucket: string;
   clientId: string;
   data: unknown;
@@ -10,6 +11,7 @@ export type StorageItemDoc = {
 
 const StorageItemSchema = new Schema<StorageItemDoc>(
   {
+    ownerId: { type: String, required: true, index: true },
     bucket: { type: String, required: true },
     clientId: { type: String, required: true },
     data: { type: Schema.Types.Mixed, required: true },
@@ -17,7 +19,6 @@ const StorageItemSchema = new Schema<StorageItemDoc>(
   { timestamps: true },
 );
 
-StorageItemSchema.index({ bucket: 1, clientId: 1 }, { unique: true });
+StorageItemSchema.index({ ownerId: 1, bucket: 1, clientId: 1 }, { unique: true });
 
 export const StorageItemModel = mongoose.model<StorageItemDoc>("StorageItem", StorageItemSchema);
-

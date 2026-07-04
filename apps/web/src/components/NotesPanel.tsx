@@ -10,33 +10,21 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Pin, PinOff, Eye, Edit3, FileText, Lock, Link2, Search, X as XIcon, Network } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import type { Note, DdlItem } from "@/lib/types";
 import { EmptyNotes, EmptyFilter } from "./EmptyIllustrations";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { useT, type TFunc } from "@/lib/i18n";
+import ObsidianMarkdown, { WIKILINK_RE, parseWikilink } from "@/components/ObsidianMarkdown";
 
-// ============================================================
-// [053] Notes 100%：wikilink 工具
-//   - WIKILINK_RE: 匹配 [[Title]]（避免贪婪 + 排除嵌套右括号）
-//   - WIKI_HREF_PREFIX: 内部跳转 marker，ReactMarkdown 不会把它当外链
-//   - 把 [[xxx]] 预处理成 markdown link [xxx](#butler-wikilink:id-or-missing:title)
-//     既保留 ReactMarkdown 原生渲染又能在 a 组件覆写里拦截 click
-// ============================================================
-const WIKILINK_RE = /\[\[([^\[\]\n]+?)\]\]/g;
-const WIKI_HREF_PREFIX = "#butler-wikilink:";
-
-function preprocessWikilinks(content: string, titleToId: Map<string, string>): string {
-  return content.replace(WIKILINK_RE, (_full, raw: string) => {
-    const title = raw.trim();
-    if (!title) return _full;
-    const id = titleToId.get(title.toLowerCase());
-    // 用 ! 前缀标记缺失，避免与合法 note id 混淆
-    const target = id ?? `!missing:${encodeURIComponent(title)}`;
-    // markdown link 文本里转义可能存在的 ] 防越界
-    const safeText = title.replace(/[\[\]]/g, "");
-    return `[${safeText}](${WIKI_HREF_PREFIX}${target})`;
+function toggleMarkdownTask(content: string, taskIndex: number, checked: boolean): string {
+  let seen = 0;
+  return content.replace(/^(\s*[-*+]\s+\[)( |x|X)(\]\s+)/gm, (match, prefix: string, _marker: string, suffix: string) => {
+    if (seen !== taskIndex) {
+      seen += 1;
+      return match;
+    }
+    seen += 1;
+    return `${prefix}${checked ? "x" : " "}${suffix}`;
   });
 }
 
@@ -133,7 +121,10 @@ export default function NotesPanel({
       // 扫描内容中所有 [[xxx]] 匹配
       const matches = n.content.match(WIKILINK_RE);
       if (!matches) continue;
-      const has = matches.some((m) => m.slice(2, -2).trim().toLowerCase() === titleLower);
+      const has = matches.some((m) => {
+        const raw = m.replace(/^!\[\[/, "").replace(/^\[\[/, "").replace(/\]\]$/, "");
+        return parseWikilink(raw).title.toLowerCase() === titleLower;
+      });
       if (has) result.push(n);
     }
     return result;
@@ -158,7 +149,7 @@ export default function NotesPanel({
       setMode("edit");
       setMobileShowList(false);
     } else {
-      setActiveId(target);
+      setActiveId(target.split("#")[0]);
       setMode("preview");
       setMobileShowList(false);
     }
@@ -613,69 +604,23 @@ function NoteEditor({
         />
       ) : (
         <div
-          className="md-preview"
           style={{
             flex: 1, overflowY: "auto",
             padding: "16px 24px",
             fontSize: 14, lineHeight: 1.7, color: "var(--color-text)",
           }}
         >
-          {content.trim() ? (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                // [053] 拦截 wikilink href（# 前缀）→ 内部跳转；其余链接照常新窗口打开
-                a: ({ href, children, ...rest }) => {
-                  if (href && href.startsWith(WIKI_HREF_PREFIX)) {
-                    const target = href.slice(WIKI_HREF_PREFIX.length);
-                    const missing = target.startsWith("!missing:");
-                    return (
-                      <a
-                        href={href}
-                        onClick={(e) => { e.preventDefault(); onWikilinkClick?.(target); }}
-                        style={{
-                          color: missing ? "var(--color-danger)" : "var(--color-info)",
-                          textDecoration: missing ? "underline dashed" : "underline",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          background: missing ? "transparent" : "color-mix(in srgb, var(--color-info) 8%, transparent)",
-                          padding: missing ? 0 : "0 3px",
-                          borderRadius: 3,
-                        }}
-                        title={missing ? t("notes.linkMissing") : t("notes.linkGo")}
-                      >
-                        {children}
-                      </a>
-                    );
-                  }
-                  return <a href={href} target="_blank" rel="noopener noreferrer" {...rest}>{children}</a>;
-                },
-              }}
-            >
-              {titleToId ? preprocessWikilinks(content, titleToId) : content}
-            </ReactMarkdown>
-          ) : (
-            <p style={{ color: "var(--color-text-faint)" }}>{t("notes.bodyEmpty")}</p>
-          )}
+          <ObsidianMarkdown
+            content={content}
+            emptyText={t("notes.bodyEmpty")}
+            titleToId={titleToId}
+            onWikilinkClick={onWikilinkClick}
+            onTaskToggle={(taskIndex, checked) => {
+              setContent((current) => toggleMarkdownTask(current, taskIndex, checked));
+            }}
+          />
         </div>
       )}
-
-      <style>{`
-        .md-preview p { margin: 0 0 10px; }
-        .md-preview ul, .md-preview ol { margin: 6px 0 10px; padding-left: 24px; }
-        .md-preview h1, .md-preview h2, .md-preview h3 { font-weight: 700; margin: 14px 0 8px; }
-        .md-preview h1 { font-size: 20px; }
-        .md-preview h2 { font-size: 17px; }
-        .md-preview h3 { font-size: 15px; }
-        .md-preview code { background: var(--color-primary-soft); padding: 1px 6px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 12.5px; color: var(--color-primary); }
-        .md-preview pre { background: var(--color-code-bg); color: var(--color-code-text); padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12.5px; margin: 10px 0; }
-        .md-preview pre code { background: transparent; color: inherit; }
-        .md-preview a { color: var(--color-primary); text-decoration: underline; }
-        .md-preview blockquote { border-left: 3px solid var(--color-primary); padding: 2px 12px; color: var(--color-text-muted); margin: 8px 0; }
-        .md-preview table { border-collapse: collapse; margin: 8px 0; font-size: 13px; }
-        .md-preview th, .md-preview td { border: 1px solid var(--color-border); padding: 6px 10px; }
-        .md-preview th { background: var(--color-surface); font-weight: 600; }
-      `}</style>
     </>
   );
 }

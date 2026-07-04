@@ -32,6 +32,15 @@ async function Main() {
     assert.equal(health.data.service, "c270-fa-agent-api");
     assert.equal(health.data.mongoReadyState, 1);
 
+    const auth = await WriteJson(`${baseUrl}/api/auth/signup`, {
+      email: `runtime-${Date.now()}@example.com`,
+      password: "runtime-pass-123",
+      name: "Runtime Smoke",
+    }, { method: "POST" });
+    assert.equal(auth.body.ok, true);
+    const cookie = ReadSetCookie(auth.response);
+    assert.ok(cookie.includes("butler_session="));
+
     const writeBody = {
       sessions: [{ id: "sess-runtime", title: "runtime smoke", createdAt: 1000, updatedAt: 2000 }],
       messages: [{
@@ -43,16 +52,16 @@ async function Main() {
       }],
     };
 
-    const written = await WriteJson(`${baseUrl}/api/chat/history`, writeBody);
+    const written = await WriteJson(`${baseUrl}/api/chat/history`, writeBody, { cookie });
     assert.equal(written.ok, true);
 
-    const readBack = await ReadJson(`${baseUrl}/api/chat/history`);
+    const readBack = await ReadJson(`${baseUrl}/api/chat/history`, cookie);
     assert.equal(readBack.ok, true);
     assert.equal(readBack.data.sessions[0].id, "sess-runtime");
     assert.equal(readBack.data.messages[0].id, "msg-runtime");
     assert.equal(readBack.data.messages[0].content, "hello mongo");
 
-    const cleared = await WriteJson(`${baseUrl}/api/chat/history`, { sessions: [], messages: [] });
+    const cleared = await WriteJson(`${baseUrl}/api/chat/history`, { sessions: [], messages: [] }, { cookie });
     assert.equal(cleared.ok, true);
 
     console.log("runtime smoke passed");
@@ -91,20 +100,31 @@ async function WaitForHealth(baseUrl) {
   throw new Error("API did not become healthy in time.");
 }
 
-async function ReadJson(url) {
-  const response = await fetch(url);
+async function ReadJson(url, cookie = "") {
+  const response = await fetch(url, {
+    headers: cookie ? { Cookie: cookie } : undefined,
+  });
   if (!response.ok) throw new Error(`${url} returned ${response.status}`);
   return response.json();
 }
 
-async function WriteJson(url, body) {
+async function WriteJson(url, body, options = {}) {
   const response = await fetch(url, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    method: options.method || "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.cookie ? { Cookie: options.cookie } : {}),
+    },
     body: JSON.stringify(body),
   });
   if (!response.ok) throw new Error(`${url} returned ${response.status}`);
-  return response.json();
+  const parsed = await response.json();
+  return options.method ? { body: parsed, response } : parsed;
+}
+
+function ReadSetCookie(response) {
+  const raw = response.headers.get("set-cookie") || "";
+  return raw.split(";")[0] || "";
 }
 
 Main().catch((error) => {

@@ -5,8 +5,9 @@ import { AgentLogModel } from "../models/AgentLogModel.js";
 // - ok=true：result 是真实业务 service 的返回值；
 // - ok=false：result 是规整后的错误信息。
 // 这样即使前端只看到“失败”，后端仍保留 actionName/input/result 的完整排查线索。
-export async function SaveAgentLog(actionName: string, input: unknown, result: unknown, ok: boolean) {
+export async function SaveAgentLog(ownerId: string, actionName: string, input: unknown, result: unknown, ok: boolean) {
   return AgentLogModel.create({
+    ownerId,
     actionName,
     input,
     result,

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { GetChatHistory, ReplaceChatHistory } from "../services/ChatHistoryService.js";
 import { StreamChat } from "../services/ChatService.js";
+import { ReadOwnerId } from "../middleware/AuthMiddleware.js";
 import { MakeOk } from "../utils/ApiResponse.js";
 import { RunSafe } from "../utils/RunSafe.js";
 
@@ -15,7 +16,7 @@ export const ChatRoutes = Router();
 ChatRoutes.get(
   "/history",
   RunSafe(async (req, res) => {
-    const history = await GetChatHistory();
+    const history = await GetChatHistory(ReadOwnerId(req));
     res.json(MakeOk(history));
   }),
 );
@@ -27,7 +28,7 @@ ChatRoutes.get(
 ChatRoutes.put(
   "/history",
   RunSafe(async (req, res) => {
-    const history = await ReplaceChatHistory(req.body || {});
+    const history = await ReplaceChatHistory(ReadOwnerId(req), req.body || {});
     res.json(MakeOk(history));
   }),
 );

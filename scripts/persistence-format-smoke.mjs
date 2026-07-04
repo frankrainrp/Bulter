@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import net from "node:net";
 
 const RootDir = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
-const MongoUrl = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/c270_fa_persistence_format_test";
+const MongoUrl = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/c240_fa_persistence_format_test";
 
 process.env.MONGO_URL = MongoUrl;
 
@@ -64,6 +64,7 @@ async function Main() {
     };
     await ExpectOk(await RequestJson(`${baseUrl}/api/storage/blobs/blob-format-1`, {
       method: "PUT",
+      cookie,
       body: blobPayload,
     }));
 
@@ -75,6 +76,7 @@ async function Main() {
     };
     await ExpectOk(await RequestJson(`${baseUrl}/api/storage/wallpapers/current`, {
       method: "PUT",
+      cookie,
       body: wallpaperPayload,
     }));
 
@@ -105,6 +107,7 @@ async function Main() {
     };
     const tasks = await RequestJson(`${baseUrl}/api/tasks/replace`, {
       method: "PUT",
+      cookie,
       body: { items: [taskPayload] },
     });
     await ExpectOk(tasks);
@@ -122,6 +125,7 @@ async function Main() {
     };
     const notes = await RequestJson(`${baseUrl}/api/notes/replace`, {
       method: "PUT",
+      cookie,
       body: { items: [notePayload] },
     });
     await ExpectOk(notes);
@@ -146,6 +150,7 @@ async function Main() {
     };
     const chat = await RequestJson(`${baseUrl}/api/chat/history`, {
       method: "PUT",
+      cookie,
       body: chatPayload,
     });
     await ExpectOk(chat);
@@ -162,6 +167,7 @@ async function Main() {
     };
     const panel = await RequestJson(`${baseUrl}/api/custom-panels/custom-format-1`, {
       method: "PUT",
+      cookie,
       body: panelPayload,
     });
     await ExpectOk(panel);
@@ -179,6 +185,7 @@ async function Main() {
     };
     const recurring = await RequestJson(`${baseUrl}/api/recurring/rec-format-1`, {
       method: "PUT",
+      cookie,
       body: recurringPayload,
     });
     await ExpectOk(recurring);
@@ -186,8 +193,10 @@ async function Main() {
 
     const agent = await RequestJson(`${baseUrl}/api/agent/run`, {
       method: "POST",
+      cookie,
       body: {
         actionName: "AddTask",
+        confirmed: true,
         data: {
           id: "task-agent-format-1",
           taskName: "Agent persistence task",
@@ -240,6 +249,7 @@ async function AssertMongoFormats(db, { email }) {
 
   const task = await db.collection("tasks").findOne({ clientId: "task-format-1" });
   assert.ok(task, "task document missing");
+  assert.equal(task.ownerId, String(user._id));
   assert.equal(task.taskName, "Persistence task");
   assert.equal(task.recurringId, "rec-format-1");
   assert.equal(task.attachments[0].kind, "blob");
@@ -248,44 +258,53 @@ async function AssertMongoFormats(db, { email }) {
 
   const agentTask = await db.collection("tasks").findOne({ clientId: "task-agent-format-1" });
   assert.ok(agentTask, "agent task document missing");
+  assert.equal(agentTask.ownerId, String(user._id));
   assert.equal(agentTask.attachments[0].ref, "blob-format-1");
 
   const note = await db.collection("notes").findOne({ clientId: "note-format-1" });
   assert.ok(note, "note document missing");
+  assert.equal(note.ownerId, String(user._id));
   assert.equal(note.vaultPath, "vault/persistence-note.md");
   assert.deepEqual(note.syncedTodos, ["review persistence"]);
 
   const chatSession = await db.collection("chatsessions").findOne({ clientId: "sess-format-1" });
   assert.ok(chatSession, "chat session document missing");
+  assert.equal(chatSession.ownerId, String(user._id));
   assert.equal(chatSession.updatedAtMs, 1783065600003);
 
   const chatMessage = await db.collection("chatmessages").findOne({ clientId: "msg-format-1" });
   assert.ok(chatMessage, "chat message document missing");
+  assert.equal(chatMessage.ownerId, String(user._id));
   assert.equal(chatMessage.files[0].blobId, "blob-format-1");
   assert.equal(chatMessage.files[0].mime, "text/plain");
 
   const customPanel = await db.collection("custompanels").findOne({ clientId: "custom-format-1" });
   assert.ok(customPanel, "custom panel document missing");
+  assert.equal(customPanel.ownerId, String(user._id));
   assert.equal(customPanel.data.kind, "markdown");
   assert.equal(customPanel.data.content, "Panel body");
 
   const recurring = await db.collection("recurringtasks").findOne({ clientId: "rec-format-1" });
   assert.ok(recurring, "recurring task document missing");
+  assert.equal(recurring.ownerId, String(user._id));
   assert.equal(recurring.data.cadence, "weekly");
   assert.equal(recurring.data.lastGeneratedPeriod, "w-2026-06-29");
 
   const blob = await db.collection("storageitems").findOne({ bucket: "blobs", clientId: "blob-format-1" });
   assert.ok(blob, "blob storage document missing");
+  assert.equal(blob.ownerId, String(user._id));
   assert.equal(blob.data.dataUrl, "data:text/plain;base64,SGVsbG8=");
   assert.equal(blob.data.mime, "text/plain");
 
   const wallpaper = await db.collection("storageitems").findOne({ bucket: "wallpapers", clientId: "current" });
   assert.ok(wallpaper, "wallpaper storage document missing");
+  assert.equal(wallpaper.ownerId, String(user._id));
   assert.equal(wallpaper.data.kind, "image");
   assert.match(wallpaper.data.dataUrl, /^data:image\/png;base64,/);
 
   const agentLog = await db.collection("agentlogs").findOne({ actionName: "AddTask" });
   assert.ok(agentLog, "agent log document missing");
+  assert.equal(agentLog.ownerId, String(user._id));
   assert.equal(agentLog.ok, true);
   assert.equal(agentLog.input.id, "task-agent-format-1");
   assert.equal(agentLog.result.attachments[0].ref, "blob-format-1");

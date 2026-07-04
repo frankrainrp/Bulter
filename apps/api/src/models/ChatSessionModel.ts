@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
 export type ChatSessionDoc = {
+  ownerId: string;
   clientId: string;
   title: string;
   createdAtMs: number;
@@ -11,7 +12,8 @@ export type ChatSessionDoc = {
 
 const ChatSessionSchema = new Schema<ChatSessionDoc>(
   {
-    clientId: { type: String, required: true, unique: true },
+    ownerId: { type: String, required: true, index: true },
+    clientId: { type: String, required: true },
     title: { type: String, default: "" },
     createdAtMs: { type: Number, required: true },
     updatedAtMs: { type: Number, required: true },
@@ -19,6 +21,7 @@ const ChatSessionSchema = new Schema<ChatSessionDoc>(
   { timestamps: true },
 );
 
-ChatSessionSchema.index({ updatedAtMs: -1 });
+ChatSessionSchema.index({ ownerId: 1, updatedAtMs: -1 });
+ChatSessionSchema.index({ ownerId: 1, clientId: 1 }, { unique: true });
 
 export const ChatSessionModel = mongoose.model<ChatSessionDoc>("ChatSession", ChatSessionSchema);

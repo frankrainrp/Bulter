@@ -16,7 +16,7 @@ import { useIsMobile } from "@/lib/use-is-mobile";
 import { useT, type TFunc } from "@/lib/i18n";
 
 export type EditingTarget =
-  | { mode: "create"; presetDate?: string; presetTime?: string }
+  | { mode: "create"; presetDate?: string; presetTime?: string; presetTags?: string[] }
   | { mode: "edit"; item: DdlItem };
 
 export interface FormPayload {
@@ -108,7 +108,8 @@ export default function TaskDetailDrawer({
   const [status, setStatus] = useState<TaskStatus>(
     init?.status ?? (init?.completed ? "done" : "todo"),
   );
-  const [tagsInput, setTagsInput] = useState((init?.tags ?? []).join(", "));
+  const initialTags = isEdit ? (init?.tags ?? []) : (target.presetTags ?? []);
+  const [tagsInput, setTagsInput] = useState(initialTags.join(", "));
   const [priority, setPriority] = useState<TaskPriority | "">(init?.priority ?? "");
 
   const nameRef = useRef<HTMLInputElement>(null);

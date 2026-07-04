@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
 export type AgentLogDoc = {
+  ownerId: string;
   actionName: string;
   input: unknown;
   result: unknown;
@@ -11,6 +12,7 @@ export type AgentLogDoc = {
 
 const AgentLogSchema = new Schema<AgentLogDoc>(
   {
+    ownerId: { type: String, required: true, index: true },
     actionName: { type: String, required: true },
     input: { type: Schema.Types.Mixed, default: {} },
     result: { type: Schema.Types.Mixed, default: {} },
@@ -19,7 +21,6 @@ const AgentLogSchema = new Schema<AgentLogDoc>(
   { timestamps: true },
 );
 
-AgentLogSchema.index({ actionName: 1, createdAt: -1 });
+AgentLogSchema.index({ ownerId: 1, actionName: 1, createdAt: -1 });
 
 export const AgentLogModel = mongoose.model<AgentLogDoc>("AgentLog", AgentLogSchema);
-

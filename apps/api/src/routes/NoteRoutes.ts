@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { AddNote, DeleteNote, GetNoteById, GetNoteList, ReplaceNoteList, UpdateNote } from "../services/NoteService.js";
+import { ReadOwnerId } from "../middleware/AuthMiddleware.js";
 import { MakeFail, MakeOk } from "../utils/ApiResponse.js";
 import { RunSafe } from "../utils/RunSafe.js";
 
@@ -8,7 +9,7 @@ export const NoteRoutes = Router();
 NoteRoutes.get(
   "/",
   RunSafe(async (req, res) => {
-    const notes = await GetNoteList();
+    const notes = await GetNoteList(ReadOwnerId(req));
     res.json(MakeOk(notes));
   }),
 );
@@ -16,7 +17,7 @@ NoteRoutes.get(
 NoteRoutes.post(
   "/",
   RunSafe(async (req, res) => {
-    const note = await AddNote(req.body);
+    const note = await AddNote(ReadOwnerId(req), req.body);
     res.status(201).json(MakeOk(note));
   }),
 );
@@ -24,7 +25,7 @@ NoteRoutes.post(
 NoteRoutes.put(
   "/replace",
   RunSafe(async (req, res) => {
-    const notes = await ReplaceNoteList(Array.isArray(req.body?.items) ? req.body.items : []);
+    const notes = await ReplaceNoteList(ReadOwnerId(req), Array.isArray(req.body?.items) ? req.body.items : []);
     res.json(MakeOk(notes));
   }),
 );
@@ -32,7 +33,7 @@ NoteRoutes.put(
 NoteRoutes.get(
   "/:id",
   RunSafe(async (req, res) => {
-    const note = await GetNoteById(req.params.id);
+    const note = await GetNoteById(ReadOwnerId(req), req.params.id);
     if (!note) {
       res.status(404).json(MakeFail("Note not found."));
       return;
@@ -44,7 +45,7 @@ NoteRoutes.get(
 NoteRoutes.patch(
   "/:id",
   RunSafe(async (req, res) => {
-    const note = await UpdateNote(req.params.id, req.body);
+    const note = await UpdateNote(ReadOwnerId(req), req.params.id, req.body);
     if (!note) {
       res.status(404).json(MakeFail("Note not found."));
       return;
@@ -56,7 +57,7 @@ NoteRoutes.patch(
 NoteRoutes.delete(
   "/:id",
   RunSafe(async (req, res) => {
-    const note = await DeleteNote(req.params.id);
+    const note = await DeleteNote(ReadOwnerId(req), req.params.id);
     if (!note) {
       res.status(404).json(MakeFail("Note not found."));
       return;

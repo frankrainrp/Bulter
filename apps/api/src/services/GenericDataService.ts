@@ -1,36 +1,46 @@
-type GenericModel = any;
+import type { Model } from "mongoose";
 
-export async function GetGenericList(model: GenericModel) {
-  const docs = await model.find().sort({ updatedAt: -1 });
+type GenericDataDoc = {
+  ownerId: string;
+  clientId: string;
+  data: unknown;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+type GenericModel<T extends GenericDataDoc> = Model<T>;
+
+export async function GetGenericList<T extends GenericDataDoc>(model: GenericModel<T>, ownerId: string) {
+  const docs = await model.find({ ownerId }).sort({ updatedAt: -1 });
   return docs.map((doc: { data: unknown }) => doc.data);
 }
 
-export async function PutGenericItem(model: GenericModel, item: { id?: string }) {
+export async function PutGenericItem<T extends GenericDataDoc>(model: GenericModel<T>, ownerId: string, item: { id?: string }) {
   const clientId = ReadClientId(item);
   const doc = await model.findOneAndUpdate(
-    { clientId },
-    { clientId, data: item },
+    { ownerId, clientId },
+    { ownerId, clientId, data: item },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
   return doc?.data || item;
 }
 
-export async function PatchGenericItem(model: GenericModel, id: string, patch: Record<string, unknown>) {
-  const existing = await model.findOne({ clientId: id });
+export async function PatchGenericItem<T extends GenericDataDoc>(model: GenericModel<T>, ownerId: string, id: string, patch: Record<string, unknown>) {
+  const existing = await model.findOne({ ownerId, clientId: id });
   const current = existing?.data && typeof existing.data === "object" ? existing.data : {};
   const next = { ...(current as Record<string, unknown>), ...patch, id, updatedAt: Date.now() };
-  return PutGenericItem(model, next);
+  return PutGenericItem(model, ownerId, next);
 }
 
-export async function DeleteGenericItem(model: GenericModel, id: string) {
-  await model.deleteOne({ clientId: id });
+export async function DeleteGenericItem<T extends GenericDataDoc>(model: GenericModel<T>, ownerId: string, id: string) {
+  await model.deleteOne({ ownerId, clientId: id });
   return { deleted: true, id };
 }
 
-export async function ReplaceGenericList(model: GenericModel, items: Array<{ id?: string }>) {
-  await model.deleteMany({});
+export async function ReplaceGenericList<T extends GenericDataDoc>(model: GenericModel<T>, ownerId: string, items: Array<{ id?: string }>) {
+  await model.deleteMany({ ownerId });
   if (items.length === 0) return [];
-  const docs = await model.insertMany(items.map((item) => ({ clientId: ReadClientId(item), data: item })));
+  const docs = await model.insertMany(items.map((item) => ({ ownerId, clientId: ReadClientId(item), data: item })));
   return docs.map((doc: { data: unknown }) => doc.data);
 }
 

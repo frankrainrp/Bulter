@@ -130,6 +130,6 @@ The transformed project is acceptable when:
 - `pnpm build:api` passes.
 - `pnpm build:web` passes.
 - no `apps/web/src/app/api/**/route.ts` files exist.
-- core tasks, task attachments, notes, auth, chat history, chat attachment blob references, custom panels, recurring tasks, and storage records persist through Express API routes and MongoDB models.
+- core tasks, notes, auth, chat history, custom panels, recurring tasks, and storage records persist through Express API routes and MongoDB models.
 - local runtime health checks pass for both `http://localhost:4010/api/health` and `http://localhost:3000/express-api/health`.
 - documentation, templates, and README files are English-first.

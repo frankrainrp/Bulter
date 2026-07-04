@@ -6,7 +6,7 @@
 // ============================================================
 
 import React, { useMemo, useState } from "react";
-import { Plus, CalendarDays, Layers, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, CalendarDays, Tag, ChevronLeft, ChevronRight } from "lucide-react";
 import type { DdlItem } from "@/lib/types";
 import { RailPrimaryBtn, RailGroupTitle, RailItem } from "./LeftRail";
 import { useT } from "@/lib/i18n";
@@ -15,6 +15,8 @@ interface CalendarRailProps {
   onCreateEvent: () => void;
   /** C1 迷你月历:有事件的日期数据源 */
   ddls?: DdlItem[];
+  selectedTag?: string | null;
+  onSelectTag?: (tag: string | null) => void;
   /** 点击迷你月历某天 → page.tsx 切 Calendar 进入 Day View */
   onJumpToDay?: (iso: string) => void;
 }
@@ -41,14 +43,33 @@ function buildMiniMonth(cursor: Date): { cells: { iso: string; day: number; isCu
   return { cells, label: `${y} · ${String(m + 1).padStart(2, "0")}` };
 }
 
-export default function CalendarRail({ onCreateEvent, ddls = [], onJumpToDay }: CalendarRailProps) {
+export default function CalendarRail({ onCreateEvent, ddls = [], selectedTag = null, onSelectTag, onJumpToDay }: CalendarRailProps) {
   const { t } = useT();
   const [cursor, setCursor] = useState(() => {
     const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d;
   });
   const { cells, label } = useMemo(() => buildMiniMonth(cursor), [cursor]);
   const todayIso = isoDate(new Date());
-  const ddlDateSet = useMemo(() => new Set(ddls.filter((d) => d.dueDate).map((d) => d.dueDate)), [ddls]);
+  const totalDatedCount = useMemo(() => ddls.filter((d) => d.dueDate).length, [ddls]);
+  const tagStats = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const d of ddls) {
+      if (!d.dueDate) continue;
+      for (const rawTag of d.tags ?? []) {
+        const tag = rawTag.trim();
+        if (!tag) continue;
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    }
+    return Array.from(counts.entries())
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+  }, [ddls]);
+  const visibleDdls = useMemo(() => {
+    if (!selectedTag) return ddls;
+    return ddls.filter((d) => (d.tags ?? []).some((tag) => tag === selectedTag));
+  }, [ddls, selectedTag]);
+  const ddlDateSet = useMemo(() => new Set(visibleDdls.filter((d) => d.dueDate).map((d) => d.dueDate)), [visibleDdls]);
 
   const prev = () => { const n = new Date(cursor); n.setMonth(n.getMonth() - 1); setCursor(n); };
   const next = () => { const n = new Date(cursor); n.setMonth(n.getMonth() + 1); setCursor(n); };
@@ -179,10 +200,50 @@ export default function CalendarRail({ onCreateEvent, ddls = [], onJumpToDay }: 
 
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <RailGroupTitle>Calendars</RailGroupTitle>
-        <RailItem icon={<CalendarDays size={14} />} label="My Calendar" active />
-        <RailItem icon={<Layers size={14} />} label="Study" />
+        <RailItem
+          icon={<CalendarDays size={14} />}
+          label="My Calendar"
+          active={!selectedTag}
+          badge={<CountBadge count={totalDatedCount} />}
+          onClick={() => onSelectTag?.(null)}
+        />
+        {tagStats.length > 0 && <RailGroupTitle>Tags</RailGroupTitle>}
+        {tagStats.map(({ tag, count }) => (
+          <RailItem
+            key={tag}
+            icon={<Tag size={14} />}
+            label={`#${tag}`}
+            active={selectedTag === tag}
+            badge={<CountBadge count={count} />}
+            onClick={() => onSelectTag?.(tag)}
+          />
+        ))}
       </div>
     </>
+  );
+}
+
+function CountBadge({ count }: { count: number }) {
+  return (
+    <span
+      style={{
+        minWidth: 18,
+        height: 18,
+        padding: "0 5px",
+        borderRadius: 999,
+        background: "var(--color-surface)",
+        color: "var(--color-text-faint)",
+        border: "1px solid var(--color-border-soft)",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 10,
+        fontWeight: 600,
+        lineHeight: 1,
+      }}
+    >
+      {count}
+    </span>
   );
 }
 

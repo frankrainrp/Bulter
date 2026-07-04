@@ -39,7 +39,7 @@ This is now a `Next frontend + Express/Node backend + MongoDB` application.
 
 The frontend is not a backend anymore. Next.js only serves the React app and proxies `/express-api/*` to Express.
 
-Browser `localStorage` is still used for UI preferences and demo-only client settings, not for core tasks, task attachments, notes, auth, chat history, chat attachment blob references, or storage-backed files.
+Browser `localStorage` is still used for UI preferences and lightweight client-only settings, not for core tasks, notes, auth, or chat history.
 
 ## Verification Commands
 
@@ -50,7 +50,6 @@ pnpm build:web
 pnpm build
 pnpm test:all
 pnpm test:runtime
-pnpm test:persistence
 ```
 
 ## Verification Record
@@ -88,8 +87,7 @@ Manual browser QA is still useful for:
 3. task create/update/delete
 4. note create/update/delete
 5. chat session/message persistence after browser refresh
-6. task attachment references after browser refresh
-7. storage-backed asset and wallpaper records
+6. storage-backed asset and wallpaper records
 
 ## Completion Definition
 

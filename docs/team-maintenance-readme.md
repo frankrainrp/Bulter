@@ -6,6 +6,12 @@ This README maps the latest refactored Butler project into six maintenance areas
 
 Use this file to assign ownership, review pull requests, and keep future changes inside the right module.
 
+The current code-smell cleanup adds three cross-cutting constraints that every owner must preserve:
+
+- Product data routes are authenticated and owner-scoped.
+- AI-generated mutations must be confirmed before they write user records.
+- Runtime verification uses a real session cookie instead of unauthenticated persistence calls.
+
 ## Current Code Structure
 
 - `apps/api` - Express + Node backend, MongoDB models, routes, services, middleware, environment config.
@@ -44,6 +50,10 @@ Backend ownership:
 
 Frontend ownership:
 
+- `apps/web/src/hooks/useChatFlow.ts`
+- `apps/web/src/hooks/useChatSessions.ts`
+- `apps/web/src/hooks/usePendingBatches.ts`
+- `apps/web/src/hooks/useFilePipeline.ts`
 - `apps/web/src/lib/ai-models.ts`
 - `apps/web/src/lib/chat-client.ts`
 - `apps/web/src/lib/ai-tools.ts`
@@ -59,6 +69,12 @@ Shared review responsibility:
 
 - `apps/web/src/components/ConfirmCard.tsx`
 - `apps/web/src/components/ChatCanvas.tsx`
+
+Code smell removal responsibilities:
+
+- Keep agent write actions behind explicit confirmation before tasks or notes are changed.
+- Keep DDL extraction and other AI structured outputs behind schema validation before the app consumes them.
+- Keep agent logs tied to the authenticated owner so one user's AI activity cannot appear in another user's history.
 
 ## 2. Database And Data Organization Specialist
 
@@ -90,7 +106,9 @@ Backend ownership:
 
 Frontend ownership:
 
+- `apps/web/src/hooks/useCoreAppData.ts`
 - `apps/web/src/lib/backend-api.ts`
+- `apps/web/src/hooks/useImportExportActions.ts`
 - `apps/web/src/lib/types.ts`
 - `apps/web/src/lib/json-export.ts`
 - `apps/web/src/lib/ics-import.ts`
@@ -99,6 +117,13 @@ Frontend ownership:
 - `apps/web/src/lib/storage-client.ts`
 - `apps/web/src/lib/custom-panels.ts`
 - `apps/web/src/lib/recurring.ts`
+
+Code smell removal responsibilities:
+
+- Keep all task, note, chat-history, custom-panel, recurring-task, and storage reads/writes scoped by `ownerId`.
+- Keep bulk replace or reset flows limited to the authenticated owner; never use collection-wide delete operations for user data.
+- Maintain owner-aware MongoDB indexes, including `ownerId + clientId` uniqueness where client IDs are user-local.
+- Strip backend-only fields such as `ownerId` from DTOs returned to the browser unless the UI explicitly needs them.
 
 ## 3. App Shell And UI System Specialist
 
@@ -109,6 +134,9 @@ Primary files:
 - `apps/web/src/app/layout.tsx`
 - `apps/web/src/app/page.tsx`
 - `apps/web/src/app/globals.css`
+- `apps/web/src/hooks/useGlobalShortcuts.ts`
+- `apps/web/src/hooks/useSearchJump.ts`
+- `apps/web/src/components/AppPortals.tsx`
 - `apps/web/src/components/AuthGate.tsx`
 - `apps/web/src/components/ChatCanvas.tsx`
 - `apps/web/src/components/EmptyIllustrations.tsx`
@@ -138,17 +166,39 @@ Latest UI rule:
 
 - The newest AI confirmation card must stay docked directly above the chat input. This is implemented in `apps/web/src/components/ChatCanvas.tsx`.
 
+Page boundary:
+
+- `apps/web/src/app/page.tsx` owns page composition only: global state wiring, refs, panel placement, and handoff between hooks/components.
+- Core hydrate/persist state belongs in `apps/web/src/hooks/useCoreAppData.ts`.
+- Chat send, retry, stop, streaming UI message creation, quota checks, and chat tool-call status toasts belong in `apps/web/src/hooks/useChatFlow.ts`.
+- Chat session lifecycle and visible message derivation belong in `apps/web/src/hooks/useChatSessions.ts`.
+- AI pending review logic belongs in `apps/web/src/hooks/usePendingBatches.ts`.
+- File/PDF extraction pipeline logic belongs in `apps/web/src/hooks/useFilePipeline.ts`.
+- Import/export task data actions belong in `apps/web/src/hooks/useImportExportActions.ts`.
+- Custom panel lifecycle logic belongs in `apps/web/src/hooks/useCustomPanels.ts`.
+- Local panel dataset registration belongs in `apps/web/src/hooks/usePanelDatasets.ts`.
+- Billing, checkout, quota, and credits modal state belongs in `apps/web/src/hooks/useBillingFlow.ts`.
+- Recurring task generation logic belongs in `apps/web/src/hooks/useRecurringTasks.ts`.
+- Task, calendar, and note CRUD/linking actions belong in `apps/web/src/hooks/useTaskNoteActions.ts`.
+- Deadline reminders and daily learning engagement belong in `apps/web/src/hooks/{useDeadlineNotifications,useDailyEngagement}.ts`.
+- Global keyboard shortcuts and search-target highlighting belong in `apps/web/src/hooks/{useGlobalShortcuts,useSearchJump}.ts`.
+
 ## 4. Learning Productivity Specialist
 
 Scope: tasks, calendar, notes, daily overview, achievements, recurring tasks, study tools, focus tools.
 
 Frontend ownership:
 
+- `apps/web/src/hooks/useDailyEngagement.ts`
+- `apps/web/src/hooks/useDeadlineNotifications.ts`
+- `apps/web/src/hooks/useRecurringTasks.ts`
+- `apps/web/src/hooks/useTaskNoteActions.ts`
 - `apps/web/src/components/AchievementsRoom.tsx`
 - `apps/web/src/components/CalendarPanel.tsx`
 - `apps/web/src/components/DailyBrief.tsx`
 - `apps/web/src/components/NotesPanel.tsx`
 - `apps/web/src/components/NotesPreview.tsx`
+- `apps/web/src/components/ObsidianMarkdown.tsx`
 - `apps/web/src/components/RecurringTasksManager.tsx`
 - `apps/web/src/components/TaskDetailDrawer.tsx`
 - `apps/web/src/components/TasksPanel.tsx`
@@ -171,6 +221,13 @@ Backend ownership:
 - `apps/api/src/models/NoteModel.ts`
 - `apps/api/src/models/RecurringTaskModel.ts`
 
+Code smell removal responsibilities:
+
+- Task, note, and recurring-task features share ownership with Database for `ownerId` persistence boundaries.
+- AI-created learning items must flow through the same confirmation and owner-scoped service paths as manual user actions.
+- Recurring materialization must continue through `apps/web/src/hooks/useRecurringTasks.ts` so duplicate guards stay centralized.
+- Shared Markdown/Obsidian-style note preview behavior belongs in `apps/web/src/components/ObsidianMarkdown.tsx`; note panels and task-note previews should reuse it instead of maintaining duplicate renderer overrides.
+
 ## 5. Panels, Connectors, And Visualization Specialist
 
 Scope: AI-generated panels, custom panels, data sources, charts, connector proxy, research flows, generated source assembly.
@@ -189,6 +246,8 @@ Backend ownership:
 
 Frontend ownership:
 
+- `apps/web/src/hooks/useCustomPanels.ts`
+- `apps/web/src/hooks/usePanelDatasets.ts`
 - `apps/web/src/components/CustomPanelView.tsx`
 - `apps/web/src/components/DataSourceBuilder.tsx`
 - `apps/web/src/components/GeneratedPanelView.tsx`
@@ -201,6 +260,12 @@ Frontend ownership:
 - `apps/web/src/lib/panel-schema.ts`
 - `apps/web/src/lib/research-assembler.ts`
 - `apps/web/src/lib/research-client.ts`
+
+Code smell removal responsibilities:
+
+- Custom panel and storage-backed panel data must stay owner-scoped through the backend service layer.
+- Generated panel/source flows can call AI services, but persisted panel records must use authenticated API routes.
+- Connector and research routes should remain stateless or explicitly document any persisted owner-owned records.
 
 ## 6. Platform, Billing, And QA Specialist
 
@@ -218,6 +283,8 @@ Platform and backend ownership:
 - `apps/api/src/server.ts`
 - `apps/api/src/config/Env.ts`
 - `apps/api/src/middleware/ErrorMiddleware.ts`
+- `apps/api/src/middleware/AuthMiddleware.ts`
+- `apps/api/src/middleware/RateLimitMiddleware.ts`
 - `apps/api/src/routes/HealthRoutes.ts`
 - `apps/api/src/utils/ApiResponse.ts`
 - `apps/api/src/utils/CookieTools.ts`
@@ -227,6 +294,7 @@ Platform and backend ownership:
 
 Frontend and product-system ownership:
 
+- `apps/web/src/hooks/useBillingFlow.ts`
 - `apps/web/package.json`
 - `apps/web/next.config.js`
 - `apps/web/tailwind.config.ts`
@@ -260,11 +328,20 @@ Required checks before push:
 - `pnpm build:web`
 - `pnpm build:api`
 
+Code smell removal responsibilities:
+
+- Keep `apps/api/src/app.ts` route groups explicit: public health/auth routes first, then authenticated product routes.
+- Keep rate-limit policy attached to auth and AI-heavy routes where abuse or runaway calls are likely.
+- Keep runtime smoke tests aligned with production behavior by signing in and sending the issued session cookie.
+- Keep README and this maintenance file updated whenever ownership moves across role boundaries.
+
 ## Cross-Team Rules
 
 - Keep Express API ownership in `apps/api`.
 - Keep browser UI ownership in `apps/web`.
 - Keep real secrets out of git.
+- Keep user-owned backend data behind `RequireAuth` and `ReadOwnerId`.
+- Keep service methods responsible for their own owner filters.
 - Update this file when a file is renamed, deleted, or moved.
 - When a change touches more than two areas, write a short design note before implementation.
 - When changing persistence contracts, add or update a guard test or document the migration in `docs/migration-status.md`.

@@ -2,8 +2,8 @@ import { z } from "zod";
 import { ChatMessageModel } from "../models/ChatMessageModel.js";
 import { ChatSessionModel } from "../models/ChatSessionModel.js";
 
-// 聊天消息里附带的文件索引。
-// 原始二进制内容由 storage bucket 保存，聊天历史只保存可恢复的 blobId 和展示元数据。
+// 聊天消息里附带的文件元数据。
+// 后端只保存文件 id/name/size/mime 这种轻量索引，不在聊天历史里重复保存二进制内容。
 const StoredFileSchema = z.object({
   id: z.string(),
   name: z.string().optional().default(""),
@@ -45,10 +45,10 @@ const ChatHistorySchema = z.object({
 // 读取所有聊天历史。
 // sessions 按更新时间倒序，方便前端左侧会话列表优先展示最近对话；
 // messages 按时间正序，方便前端直接按数组顺序渲染一条会话的聊天流。
-export async function GetChatHistory() {
+export async function GetChatHistory(ownerId: string) {
   const [sessions, messages] = await Promise.all([
-    ChatSessionModel.find().sort({ updatedAtMs: -1 }),
-    ChatMessageModel.find().sort({ timestampMs: 1 }),
+    ChatSessionModel.find({ ownerId }).sort({ updatedAtMs: -1 }),
+    ChatMessageModel.find({ ownerId }).sort({ timestampMs: 1 }),
   ]);
 
   return {
@@ -60,19 +60,20 @@ export async function GetChatHistory() {
 // 用客户端传入的历史快照覆盖数据库中的聊天历史。
 // 这是“以客户端当前状态为准”的同步策略，适合本项目的单用户/课程演示场景。
 // 如果未来改成多用户协作，需要把这里拆成按 session/message 的增量 upsert。
-export async function ReplaceChatHistory(input: unknown) {
+export async function ReplaceChatHistory(ownerId: string, input: unknown) {
   // zod parse 同时完成类型校验和默认值补齐；非法输入会抛出，由 RunSafe 转成错误响应。
   const data = ChatHistorySchema.parse(input);
 
   // 整包替换前先清空旧集合，避免前端删除的会话在服务端残留。
   await Promise.all([
-    ChatSessionModel.deleteMany({}),
-    ChatMessageModel.deleteMany({}),
+    ChatSessionModel.deleteMany({ ownerId }),
+    ChatMessageModel.deleteMany({ ownerId }),
   ]);
 
   // DTO -> Mongo document。
   // 使用 clientId 保存前端 id，避免把 Mongo _id 泄漏到前端状态模型里。
   const sessions = data.sessions.map((item) => ({
+    ownerId,
     clientId: item.id,
     title: item.title,
     createdAtMs: item.createdAt,
@@ -84,6 +85,7 @@ export async function ReplaceChatHistory(input: unknown) {
   const messages = data.messages
     .filter((item) => item.role === "user" || item.role === "assistant")
     .map((item) => ({
+      ownerId,
       clientId: item.id,
       sessionId: item.sessionId,
       role: item.role,
@@ -108,7 +110,7 @@ export async function ReplaceChatHistory(input: unknown) {
     await ChatMessageModel.insertMany(messages);
   }
 
-  return GetChatHistory();
+  return GetChatHistory(ownerId);
 }
 
 // Mongo document -> 前端 session DTO。

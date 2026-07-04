@@ -35,41 +35,42 @@ export const TaskUpdateSchema = TaskInputSchema.partial();
 export type TaskInput = z.infer<typeof TaskInputSchema>;
 export type TaskUpdate = z.infer<typeof TaskUpdateSchema>;
 
-export async function AddTask(input: TaskInput) {
+export async function AddTask(ownerId: string, input: TaskInput) {
   const data = TaskInputSchema.parse(input);
-  const task = await TaskModel.create({ ...data, clientId: data.clientId || data.id || NewClientId() });
+  const task = await TaskModel.create({ ...data, ownerId, clientId: data.clientId || data.id || NewClientId() });
   return ReadTaskDto(task);
 }
 
-export async function GetTaskList() {
-  const tasks = await TaskModel.find().sort({ dueDate: 1, dueTime: 1, createdAt: -1 });
+export async function GetTaskList(ownerId: string) {
+  const tasks = await TaskModel.find({ ownerId }).sort({ dueDate: 1, dueTime: 1, createdAt: -1 });
   return tasks.map(ReadTaskDto);
 }
 
-export async function GetTaskById(id: string) {
-  const task = await TaskModel.findOne({ clientId: id });
+export async function GetTaskById(ownerId: string, id: string) {
+  const task = await TaskModel.findOne({ ownerId, clientId: id });
   return task ? ReadTaskDto(task) : null;
 }
 
-export async function UpdateTask(id: string, input: TaskUpdate) {
+export async function UpdateTask(ownerId: string, id: string, input: TaskUpdate) {
   const data = TaskUpdateSchema.parse(input);
-  const task = await TaskModel.findOneAndUpdate({ clientId: id }, data, { new: true });
+  const task = await TaskModel.findOneAndUpdate({ ownerId, clientId: id }, data, { new: true });
   return task ? ReadTaskDto(task) : null;
 }
 
-export async function DeleteTask(id: string) {
-  const task = await TaskModel.findOneAndDelete({ clientId: id });
+export async function DeleteTask(ownerId: string, id: string) {
+  const task = await TaskModel.findOneAndDelete({ ownerId, clientId: id });
   return task ? ReadTaskDto(task) : null;
 }
 
-export async function ReplaceTaskList(inputs: TaskInput[]) {
+export async function ReplaceTaskList(ownerId: string, inputs: TaskInput[]) {
   const items = z.array(TaskInputSchema).parse(inputs);
-  await TaskModel.deleteMany({});
+  await TaskModel.deleteMany({ ownerId });
   if (items.length === 0) return [];
 
   const docs = await TaskModel.insertMany(
     items.map((item) => ({
       ...item,
+      ownerId,
       clientId: item.clientId || item.id || NewClientId(),
     })),
   );
@@ -78,7 +79,7 @@ export async function ReplaceTaskList(inputs: TaskInput[]) {
 
 function ReadTaskDto(task: { toObject: () => Record<string, unknown> }) {
   const raw = task.toObject();
-  const { _id, __v, clientId, ...rest } = raw;
+  const { _id, __v, ownerId, clientId, ...rest } = raw;
   return {
     id: String(clientId),
     ...rest,

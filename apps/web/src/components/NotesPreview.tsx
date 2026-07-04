@@ -7,9 +7,8 @@
 
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { useT } from "@/lib/i18n";
+import ObsidianMarkdown from "@/components/ObsidianMarkdown";
 
 interface Props {
   title: string;          // 任务名
@@ -88,18 +87,13 @@ export default function NotesPreview({ title, notes, onClose }: Props) {
 
         {/* Body */}
         <div
-          className="md-preview"
           style={{
             flex: 1, overflowY: "auto",
             padding: "16px 20px",
             fontSize: 14, lineHeight: 1.7, color: "var(--color-text)",
           }}
         >
-          {notes.trim() ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{notes}</ReactMarkdown>
-          ) : (
-            <p style={{ color: "var(--color-text-faint)", margin: 0 }}>{t("notes.notesEmpty")}</p>
-          )}
+          <ObsidianMarkdown content={notes} emptyText={t("notes.notesEmpty")} />
         </div>
       </div>
 
@@ -107,40 +101,6 @@ export default function NotesPreview({ title, notes, onClose }: Props) {
         @keyframes preview-fade {
           from { opacity: 0; }
           to { opacity: 1; }
-        }
-        .md-preview p { margin: 0 0 10px; }
-        .md-preview p:last-child { margin-bottom: 0; }
-        .md-preview ul, .md-preview ol { margin: 6px 0 10px; padding-left: 24px; }
-        .md-preview li { margin: 3px 0; }
-        .md-preview code {
-          background: var(--color-primary-soft); padding: 1px 6px; border-radius: 4px;
-          font-family: ui-monospace, SFMono-Regular, monospace;
-          font-size: 12.5px; color: var(--color-primary);
-        }
-        .md-preview pre {
-          background: #1f2937; color: #f3f4f6; padding: 12px;
-          border-radius: 8px; overflow-x: auto;
-          font-size: 12.5px; line-height: 1.55; margin: 10px 0;
-        }
-        .md-preview pre code { background: transparent; color: inherit; padding: 0; }
-        .md-preview a { color: var(--color-primary); text-decoration: underline; }
-        .md-preview strong { font-weight: 600; }
-        .md-preview h1, .md-preview h2, .md-preview h3 {
-          font-weight: 700; margin: 14px 0 8px; line-height: 1.3;
-        }
-        .md-preview h1 { font-size: 18px; }
-        .md-preview h2 { font-size: 16px; }
-        .md-preview h3 { font-size: 14.5px; }
-        .md-preview table { border-collapse: collapse; margin: 8px 0; font-size: 13px; }
-        .md-preview th, .md-preview td {
-          border: 1px solid var(--color-border); padding: 6px 10px; text-align: left;
-        }
-        .md-preview th { background: var(--color-surface); font-weight: 600; }
-        .md-preview blockquote {
-          border-left: 3px solid var(--color-primary);
-          padding: 2px 12px; color: var(--color-text-muted);
-          margin: 8px 0; background: var(--color-surface);
-          border-radius: 0 6px 6px 0;
         }
       `}</style>
     </div>

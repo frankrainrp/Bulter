@@ -2,6 +2,7 @@ import type { Response } from "express";
 import { OpenAI } from "openai";
 import { ChatTools } from "./ChatToolDefinitions.js";
 import { ClampText } from "./AiService.js";
+import { MakeFail } from "../utils/ApiResponse.js";
 
 // 后端内部使用的 Chat Completion 消息类型。
 // 它刻意对 OpenAI/DeepSeek 的 message 格式保持“宽松兼容”：
@@ -55,13 +56,13 @@ const PersonalityLine: Record<string, string> = {
 export async function StreamChat(input: ChatRequest, res: Response) {
   // 没有 key 时直接失败，避免把未配置问题伪装成模型错误。
   if (!process.env.DEEPSEEK_API_KEY) {
-    res.status(500).json({ error: "DEEPSEEK_API_KEY is not configured." });
+    res.status(500).json(MakeFail("DEEPSEEK_API_KEY is not configured."));
     return;
   }
 
   // messages 是唯一必需字段。这里先做最外层形状检查，后续 ClampMessages 再处理每条内容。
   if (!Array.isArray(input.messages)) {
-    res.status(400).json({ error: "messages must be an array." });
+    res.status(400).json(MakeFail("messages must be an array."));
     return;
   }
 

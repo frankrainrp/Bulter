@@ -1,5 +1,7 @@
 import { OpenAI } from "openai";
 
+// Shared AI helpers live here so route/services keep the same model, base URL,
+// input-size limits, and JSON/error parsing behavior.
 export const InputLimits = {
   maxPromptChars: 8000,
 };
@@ -36,4 +38,3 @@ export function ReadJsonObject(raw: string) {
     return { ok: false as const, error: "AI output was not valid JSON." };
   }
 }
-

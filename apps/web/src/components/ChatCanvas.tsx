@@ -7,8 +7,8 @@
 // responses rendered as simple message bubbles.
 // ============================================================
 
-import React, { useRef, useEffect, useMemo, useState } from "react";
-import { FileText, Image as ImageIcon, File as FileIcon, Brain, ChevronDown, Copy, RefreshCw, Check as CheckIcon, TrendingUp, LayoutDashboard, Workflow } from "lucide-react";
+import React, { useRef, useEffect, useMemo, useState, useCallback } from "react";
+import { FileText, Image as ImageIcon, File as FileIcon, Brain, ChevronDown, Copy, RefreshCw, Check as CheckIcon, TrendingUp, LayoutDashboard, Workflow, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ChatMessage, ProcessingPipeline as Pipeline, UploadedFile, DdlItem } from "@/lib/types";
@@ -147,57 +147,42 @@ function UserBubble({ msg }: { msg: ChatMessage }) {
 }
 
 function UserFileChip({ file }: { file: UploadedFile }) {
-  const { t } = useT();
-  const [loading, setLoading] = useState(false);
   const isImage = file.mime.startsWith("image/");
   const isPdf = file.mime === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
   const Icon = isImage ? ImageIcon : isPdf ? FileText : FileIcon;
-  const canDownload = Boolean(file.blobId);
-
-  const downloadStoredFile = async () => {
-    if (!file.blobId || loading) return;
-    setLoading(true);
+  const handleDownload = useCallback(async () => {
+    if (!file.blobId) return;
     try {
       const { getBlobUrl } = await import("@/lib/blobs");
-      const info = await getBlobUrl(file.blobId);
-      if (!info) return;
-      const link = document.createElement("a");
-      link.href = info.url;
-      link.download = info.name;
-      link.click();
-      window.setTimeout(() => URL.revokeObjectURL(info.url), 1000);
-    } finally {
-      setLoading(false);
+      const rec = await getBlobUrl(file.blobId);
+      if (!rec) return;
+      const anchor = document.createElement("a");
+      anchor.href = rec.url;
+      anchor.download = rec.name || file.name;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(rec.url), 30000);
+    } catch (error) {
+      console.warn("[blob] download failed:", error);
     }
+  }, [file.blobId, file.name]);
+
+  const chipStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "4px 8px",
+    borderRadius: 6,
+    background: "var(--color-bg)",
+    border: "1px solid var(--color-border)",
+    fontSize: 11,
+    color: "var(--color-text)",
+    maxWidth: 220,
   };
 
-  return (
-    <div
-      role={canDownload ? "button" : undefined}
-      tabIndex={canDownload ? 0 : undefined}
-      title={canDownload ? t("att.download") : undefined}
-      onClick={downloadStoredFile}
-      onKeyDown={(event) => {
-        if (canDownload && (event.key === "Enter" || event.key === " ")) {
-          event.preventDefault();
-          void downloadStoredFile();
-        }
-      }}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 8px",
-        borderRadius: 6,
-        background: "var(--color-bg)",
-        border: "1px solid var(--color-border)",
-        fontSize: 11,
-        color: "var(--color-text)",
-        maxWidth: 220,
-        cursor: canDownload ? "pointer" : "default",
-        opacity: loading ? 0.72 : 1,
-      }}
-    >
+  const content = (
+    <>
       <Icon size={12} color="var(--color-primary)" style={{ flexShrink: 0 }} />
       <span
         style={{
@@ -209,7 +194,28 @@ function UserFileChip({ file }: { file: UploadedFile }) {
       >
         {file.name}
       </span>
-    </div>
+      {file.blobId && <Download size={12} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />}
+    </>
+  );
+
+  if (!file.blobId) {
+    return <div style={chipStyle}>{content}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleDownload}
+      title="Download attachment"
+      aria-label={`Download ${file.name}`}
+      style={{
+        ...chipStyle,
+        cursor: "pointer",
+        fontFamily: "inherit",
+      }}
+    >
+      {content}
+    </button>
   );
 }
 
