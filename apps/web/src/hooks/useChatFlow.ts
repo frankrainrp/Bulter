@@ -18,7 +18,6 @@ import {
   isPremiumModel,
   spendCredits,
 } from "@/lib/credits";
-import { saveBlob } from "@/lib/blobs";
 import { playSound } from "@/lib/sound";
 import type { ChatMessage, ChatSession, DdlItem, UploadedFile } from "@/lib/types";
 import { canSpend } from "@/lib/usage";
@@ -120,20 +119,7 @@ export function useChatFlow({
 
     // Snapshot attachments before clearing input state; the async pipeline must
     // keep the exact File objects the user submitted in this send action.
-    let filesSnapshot = attachedFiles;
-    if (attachedFiles.length > 0) {
-      try {
-        filesSnapshot = await Promise.all(attachedFiles.map(async (file) => {
-          if (file.blobId || !file.file) return file;
-          const stored = await saveBlob(file.file);
-          return { ...file, blobId: stored.id };
-        }));
-      } catch (error) {
-        console.warn("[attachments] database save failed:", error);
-        toast.error("Attachment could not be saved to the database.");
-        return;
-      }
-    }
+    const filesSnapshot = attachedFiles;
     const userUiMsg: ChatMessage = {
       id: uid(),
       sessionId: sid,
