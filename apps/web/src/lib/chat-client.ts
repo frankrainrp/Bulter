@@ -95,6 +95,8 @@ interface SseChunk {
   /** [087] include_usage 流尾 chunk：choices 为空，仅带 token 用量 */
   usage?: {
     prompt_tokens?: number;
+    prompt_cache_hit_tokens?: number;
+    prompt_cache_miss_tokens?: number;
     completion_tokens?: number;
     total_tokens?: number;
   };
@@ -270,7 +272,10 @@ async function streamOneRound(opts: {
       if (chunk.usage) {
         const model: AiModelId =
           opts.model && isValidModelId(opts.model) ? opts.model : DEFAULT_MODEL_ID;
-        recordUsage(model, chunk.usage.prompt_tokens ?? 0, chunk.usage.completion_tokens ?? 0);
+        recordUsage(model, chunk.usage.prompt_tokens ?? 0, chunk.usage.completion_tokens ?? 0, {
+          promptCacheHitTokens: chunk.usage.prompt_cache_hit_tokens,
+          promptCacheMissTokens: chunk.usage.prompt_cache_miss_tokens,
+        });
         continue;
       }
 

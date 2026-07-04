@@ -18,12 +18,12 @@ import type { AiModelId } from "./ai-models";
  * 成本单价：¥ / 1000 token（代表性值，约 USD/M × 7.2 ÷ 1000）。
  * P4 `scripts/sync-models.ts` 会用各家官方定价覆盖此表。
  */
-export const COST_PER_K: Record<AiModelId, { in: number; out: number }> = {
-  "deepseek-v4-flash":    { in: 0.001,  out: 0.002 },
-  "deepseek-v4-thinking": { in: 0.002,  out: 0.003 },
-  gemini:                 { in: 0.009,  out: 0.072 },
-  gpt:                    { in: 0.018,  out: 0.072 },
-  claude:                 { in: 0.0216, out: 0.108 },
+export const COST_PER_K: Record<AiModelId, { in: number; out: number; inCacheHit?: number }> = {
+  "deepseek-v4-flash":    { in: 0.001,  inCacheHit: 0.00002,  out: 0.002 },
+  "deepseek-v4-thinking": { in: 0.0031, inCacheHit: 0.000026, out: 0.0063 },
+  gemini:                 { in: 0.009,                  out: 0.072 },
+  gpt:                    { in: 0.018,                  out: 0.072 },
+  claude:                 { in: 0.0216,                 out: 0.108 },
 };
 
 export const WINDOW_HOURS = 5;
@@ -65,9 +65,25 @@ function weekKey(now = Date.now()): string {
 }
 
 /** 计算一次调用的 ¥ 成本 */
-export function costOf(model: AiModelId, promptTokens: number, completionTokens: number): number {
+export type UsageCacheBreakdown = {
+  promptCacheHitTokens?: number;
+  promptCacheMissTokens?: number;
+};
+
+export function costOf(
+  model: AiModelId,
+  promptTokens: number,
+  completionTokens: number,
+  cache?: UsageCacheBreakdown,
+): number {
   const p = COST_PER_K[model] ?? COST_PER_K["deepseek-v4-flash"];
-  return (promptTokens / 1000) * p.in + (completionTokens / 1000) * p.out;
+  const hit = Math.max(0, cache?.promptCacheHitTokens ?? 0);
+  const miss = Math.max(0, cache?.promptCacheMissTokens ?? 0);
+  const hasCacheBreakdown = hit > 0 || miss > 0;
+  const inputCost = hasCacheBreakdown
+    ? (hit / 1000) * (p.inCacheHit ?? p.in) + (miss / 1000) * p.in
+    : (promptTokens / 1000) * p.in;
+  return inputCost + (completionTokens / 1000) * p.out;
 }
 
 function readNum(key: string): number {
@@ -121,9 +137,14 @@ function cleanupOld(curWin: string, curWeek: string) {
 }
 
 /** 记一次用量 → 累加到当前窗口 + 本周 + 广播。返回本次 ¥ 成本。*/
-export function recordUsage(model: AiModelId, promptTokens: number, completionTokens: number): number {
+export function recordUsage(
+  model: AiModelId,
+  promptTokens: number,
+  completionTokens: number,
+  cache?: UsageCacheBreakdown,
+): number {
   if (typeof window === "undefined") return 0;
-  const cost = costOf(model, promptTokens, completionTokens);
+  const cost = costOf(model, promptTokens, completionTokens, cache);
   if (cost <= 0) return 0;
   try {
     const wk = winKey();
