@@ -102,7 +102,9 @@ export async function StreamChat(input: ChatRequest, res: Response) {
         reasoning_effort: "high",
         thinking: { type: "enabled" },
       }
-    : {};
+    : {
+        thinking: { type: "disabled" },
+      };
 
   // 创建上游流。stream_options.include_usage 会让流尾多返回 token 用量 chunk，
   // 前端 chat-client 会识别 usage 并记录本地成本估算。
