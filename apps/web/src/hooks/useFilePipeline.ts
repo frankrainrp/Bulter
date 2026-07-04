@@ -160,7 +160,7 @@ export function useFilePipeline({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ markdown: finalMd, filename: uploaded.name, currentDate: isoToday }),
       });
-      const json = await res.json();
+      const json = await readExtractResponse(res);
       if (!json.ok) {
         setStep(1, "failed", json.error || t("pg.extractFail"));
         finishPipeline("failed");
@@ -221,4 +221,17 @@ export function useFilePipeline({
     handleRemoveAttachment,
     runRealPipeline,
   };
+}
+
+async function readExtractResponse(res: Response) {
+  const text = await res.text();
+  if (!text.trim()) {
+    throw new Error(`Deadline extraction service returned HTTP ${res.status} with an empty response.`);
+  }
+
+  try {
+    return JSON.parse(text) as { ok: boolean; items?: Array<Omit<DdlItem, "id" | "source" | "completed">>; error?: string };
+  } catch {
+    throw new Error(`Deadline extraction service returned HTTP ${res.status} instead of JSON.`);
+  }
 }

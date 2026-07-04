@@ -99,18 +99,16 @@ export async function ExtractDdls(input: ExtractDdlInput) {
   const currentDate = input.currentDate || new Date().toISOString().slice(0, 10);
   const client = GetDeepSeekClient();
 
-  const completion = await client.chat.completions.create({
-    model: "deepseek-v4-flash",
-    messages: [
-      { role: "system", content: BuildExtractSystemPrompt(currentDate) },
-      { role: "user", content: `File name: ${filename}\n\nDocument content:\n${docText}` },
-    ],
-    tools: [ExtractTool],
-    tool_choice: { type: "function", function: { name: "extract_ddls" } },
-    thinking: { type: "disabled" },
-    max_tokens: 2000,
-    temperature: 0.2,
-  } as Parameters<typeof client.chat.completions.create>[0]) as unknown as ExtractCompletion;
+  let completion: ExtractCompletion;
+  try {
+    completion = await RunExtractCompletionWithRetry(client, {
+      currentDate,
+      docText,
+      filename,
+    });
+  } catch (error) {
+    return { ok: false, status: 502, error: ReadExtractAiError(error) };
+  }
 
   const toolCall = completion.choices[0]?.message?.tool_calls?.[0];
   if (!toolCall) {
@@ -142,4 +140,52 @@ function BuildExtractSystemPrompt(currentDate: string) {
     ExtractSystemPromptPrefix,
     `Today is ${currentDate}.`,
   ].join("\n");
+}
+
+async function RunExtractCompletionWithRetry(
+  client: ReturnType<typeof GetDeepSeekClient>,
+  input: { currentDate: string; docText: string; filename: string },
+) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await client.chat.completions.create({
+        model: "deepseek-v4-flash",
+        messages: [
+          { role: "system", content: BuildExtractSystemPrompt(input.currentDate) },
+          { role: "user", content: `File name: ${input.filename}\n\nDocument content:\n${input.docText}` },
+        ],
+        tools: [ExtractTool],
+        tool_choice: { type: "function", function: { name: "extract_ddls" } },
+        thinking: { type: "disabled" },
+        max_tokens: 2000,
+        temperature: 0.2,
+      } as Parameters<typeof client.chat.completions.create>[0]) as unknown as ExtractCompletion;
+    } catch (error) {
+      lastError = error;
+      if (attempt > 0 || !IsTransientAiProviderError(error)) break;
+      await Sleep(750);
+    }
+  }
+  throw lastError;
+}
+
+function IsTransientAiProviderError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /Internal Server Error|Unexpected token.*Internal S|fetch failed|ECONNRESET|ETIMEDOUT|5\d\d/.test(message);
+}
+
+function ReadExtractAiError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  if (/Internal Server Error|Unexpected token.*Internal S|5\d\d/.test(message)) {
+    return "AI provider returned a temporary server error while extracting deadlines. Please retry.";
+  }
+  if (/rate limit|429/i.test(message)) {
+    return "AI provider rate limit was reached while extracting deadlines. Please retry shortly.";
+  }
+  return "Deadline extraction model request failed.";
+}
+
+function Sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
