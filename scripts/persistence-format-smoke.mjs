@@ -4,6 +4,8 @@ import net from "node:net";
 
 const RootDir = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const MongoUrl = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/c240_fa_persistence_format_test";
+const ResetDbBeforeRun = process.argv.includes("--reset-db") || process.env.PERSISTENCE_RESET_DB === "1";
+const CleanupDbAfterRun = process.argv.includes("--cleanup-db") || process.env.PERSISTENCE_CLEANUP_DB === "1";
 
 process.env.MONGO_URL = MongoUrl;
 
@@ -31,7 +33,9 @@ async function Main() {
   try {
     const { ConnectMongo } = await import("../apps/api/dist/db/MongoDb.js");
     connection = await ConnectMongo();
-    await connection.db.dropDatabase();
+    if (ResetDbBeforeRun) {
+      await connection.db.dropDatabase();
+    }
 
     await WaitForHealth(baseUrl);
 
@@ -220,9 +224,13 @@ async function Main() {
     await ExpectOk(agent);
     assert.equal(agent.json.data.attachments[0].ref, "blob-format-1");
 
-    await AssertMongoFormats(connection.db, { email });
+    const proof = await AssertMongoFormats(connection.db, { email });
 
     console.log("persistence format smoke passed");
+    console.log(`database preserved: ${connection.db.databaseName}`);
+    console.log(`proof user: ${email}`);
+    console.log(`proof ownerId: ${proof.ownerId}`);
+    console.log("proof ids: task-format-1, note-format-1, msg-format-1, blob-format-1, rec-format-1, custom-format-1");
   } catch (error) {
     console.error(stdout);
     console.error(stderr);
@@ -230,7 +238,10 @@ async function Main() {
   } finally {
     child.kill("SIGTERM");
     if (connection) {
-      await connection.db.dropDatabase();
+      if (CleanupDbAfterRun) {
+        await connection.db.dropDatabase();
+        console.log(`database cleaned: ${connection.db.databaseName}`);
+      }
       await connection.close();
     }
   }
@@ -302,12 +313,14 @@ async function AssertMongoFormats(db, { email }) {
   assert.equal(wallpaper.data.kind, "image");
   assert.match(wallpaper.data.dataUrl, /^data:image\/png;base64,/);
 
-  const agentLog = await db.collection("agentlogs").findOne({ actionName: "AddTask" });
+  const agentLog = await db.collection("agentlogs").findOne({ ownerId: String(user._id), actionName: "AddTask" });
   assert.ok(agentLog, "agent log document missing");
   assert.equal(agentLog.ownerId, String(user._id));
   assert.equal(agentLog.ok, true);
   assert.equal(agentLog.input.id, "task-agent-format-1");
   assert.equal(agentLog.result.attachments[0].ref, "blob-format-1");
+
+  return { ownerId: String(user._id) };
 }
 
 function GetFreePort() {
