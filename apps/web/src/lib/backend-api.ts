@@ -99,13 +99,32 @@ async function CallApi<T>(path: string, init?: RequestInit) {
     },
   });
 
-  const body = (await res.json()) as ApiResult<T>;
+  const body = await ReadApiResult<T>(res, path);
 
   if (body.ok === false) {
     throw new Error(body.error);
   }
 
   return body.data;
+}
+
+async function ReadApiResult<T>(res: Response, path: string): Promise<ApiResult<T>> {
+  const text = await res.text();
+  if (!text.trim()) {
+    return {
+      ok: false,
+      error: `API ${path} returned HTTP ${res.status} with an empty response.`,
+    };
+  }
+
+  try {
+    return JSON.parse(text) as ApiResult<T>;
+  } catch {
+    const hint = /Internal Server Error/i.test(text)
+      ? "The Express API may be unavailable. Make sure the API server is running on port 4010."
+      : `API ${path} returned HTTP ${res.status} instead of JSON.`;
+    return { ok: false, error: hint };
+  }
 }
 
 export function GetTaskListByApi() {
