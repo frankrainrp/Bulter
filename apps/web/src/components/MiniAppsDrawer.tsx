@@ -99,10 +99,10 @@ export default function MiniAppsDrawer({ open, onClose, ddls = [], onAppendTaskN
                 top: 56,
                 right: 0,
                 bottom: 0,
-                width: 320,
-                background: "var(--color-bg)",
-                borderLeft: "1px solid var(--color-border)",
-                boxShadow: open ? "-8px 0 24px rgba(0,0,0,0.06)" : "none",
+                width: 376,
+                background: "var(--color-surface)",
+                borderLeft: "2px solid var(--color-border)",
+                boxShadow: open ? "var(--shadow-drawer)" : "none",
                 transform: open ? "translateX(0)" : "translateX(100%)",
               }),
           transition: "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -117,33 +117,32 @@ export default function MiniAppsDrawer({ open, onClose, ddls = [], onAppendTaskN
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 8,
-            padding: "12px 14px",
-            borderBottom: "1px solid var(--color-border)",
+            gap: 11,
+            padding: "17px 18px 14px",
+            borderBottom: "2px solid var(--color-border)",
+            background: "var(--color-bg)",
           }}
         >
-          <Sparkles size={14} color="var(--color-primary)" />
-          <h2
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--color-text)",
-              margin: 0,
-              letterSpacing: 0.3,
-              flex: 1,
-            }}
-          >
-            {t("mini.title")}
-          </h2>
+          <span style={{ width: 34, height: 34, borderRadius: 9, border: "2px solid var(--color-border)", background: "var(--color-primary-soft)", color: "var(--color-primary)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "var(--shadow-card)" }}>
+            <Sparkles size={16} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 className="font-display" style={{ fontSize: 18, fontWeight: 700, color: "var(--color-text)", margin: 0, lineHeight: 1.1 }}>
+              {t("mini.title")}
+            </h2>
+            <p style={{ fontSize: 11.5, color: "var(--color-text-muted)", margin: "4px 0 0" }}>
+              {t("mini.subtitle")}
+            </p>
+          </div>
           <button
             onClick={onClose}
             aria-label={t("common.close")}
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              border: "none",
-              background: "transparent",
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: "1px solid var(--color-border)",
+              background: "var(--color-surface)",
               cursor: "pointer",
               color: "var(--color-text-muted)",
               display: "inline-flex",
@@ -161,12 +160,16 @@ export default function MiniAppsDrawer({ open, onClose, ddls = [], onAppendTaskN
         {APPS.length > 1 && (
           <div
             style={{
-              display: "flex",
-              gap: 4,
-              padding: "8px 12px",
-              borderBottom: "1px solid var(--color-border-soft)",
+              display: "grid",
+              gridTemplateColumns: `repeat(${APPS.length}, minmax(0, 1fr))`,
+              gap: 6,
+              padding: "10px 12px",
+              borderBottom: "1px solid var(--color-border)",
+              background: "var(--color-surface)",
               overflowX: "auto",
             }}
+            role="tablist"
+            aria-label={t("mini.title")}
           >
             {APPS.map((app) => {
               const isActive = app.id === activeId;
@@ -175,20 +178,25 @@ export default function MiniAppsDrawer({ open, onClose, ddls = [], onAppendTaskN
                   key={app.id}
                   onClick={() => !app.disabled && setActiveId(app.id)}
                   disabled={app.disabled}
+                  role="tab"
+                  aria-selected={isActive}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     gap: 6,
-                    padding: "6px 10px",
-                    borderRadius: 6,
-                    border: "1px solid " + (isActive ? "var(--color-primary)" : "var(--color-border)"),
-                    background: isActive ? "var(--color-primary-soft)" : "var(--color-bg)",
-                    color: isActive ? "var(--color-primary)" : "var(--color-text-muted)",
+                    minWidth: 0,
+                    padding: "8px 7px",
+                    borderRadius: 8,
+                    border: "1px solid " + (isActive ? "var(--color-border)" : "transparent"),
+                    background: isActive ? "var(--color-primary)" : "transparent",
+                    color: isActive ? "var(--color-bg)" : "var(--color-text-muted)",
                     cursor: app.disabled ? "not-allowed" : "pointer",
-                    fontSize: 12,
-                    fontWeight: 500,
+                    fontSize: 11.5,
+                    fontWeight: isActive ? 700 : 600,
                     fontFamily: "inherit",
                     opacity: app.disabled ? 0.5 : 1,
+                    boxShadow: isActive ? "var(--shadow-card)" : "none",
                   }}
                 >
                   {app.icon}
@@ -204,7 +212,8 @@ export default function MiniAppsDrawer({ open, onClose, ddls = [], onAppendTaskN
           style={{
             flex: 1,
             overflowY: "auto",
-            padding: "20px 16px",
+            padding: "18px 16px 24px",
+            background: "color-mix(in srgb, var(--color-bg) 72%, var(--color-surface))",
           }}
         >
           <ActiveComponent ddls={ddls} onAppendTaskNote={onAppendTaskNote} />

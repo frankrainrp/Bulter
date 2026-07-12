@@ -15,7 +15,9 @@ Default project repository: https://github.com/frankrainrp/C270-Team2
 
 The frontend calls backend functionality through `/express-api/*`. Next.js rewrites those requests to the Express API under `/api/*`.
 
-Most product APIs are protected by the session middleware in `apps/api/src/middleware/AuthMiddleware.ts`. Auth and AI-heavy entry points also use the in-memory rate limiter in `apps/api/src/middleware/RateLimitMiddleware.ts` so write-heavy and model-heavy routes have an explicit safety boundary.
+Most product APIs are protected by the session middleware in `apps/api/src/middleware/AuthMiddleware.ts`. AI-heavy entry points use per-user burst limits plus a MongoDB-backed 1,000-request daily ceiling that resets at local midnight and survives API restarts. Chat, generation, and connector routes have separate burst buckets so multi-round tool calls do not consume one undersized shared minute quota. The browser cost meter separately tracks a ¥3 daily allowance and no longer uses a five-hour window.
+
+Only `POST /api/chat` consumes Chat completion limits; history GET/PUT traffic is excluded. Streaming history persistence is debounced and serialized, while file-pipeline prompts, error bubbles, and messages from other sessions are removed before model history is built. The latest user turn is authoritative when a previous request failed without an assistant reply.
 
 ## Startup Guide
 
@@ -50,11 +52,7 @@ Required for AI chat:
 DEEPSEEK_API_KEY=your_key_here
 ```
 
-Required for OCR:
-
-```env
-MISTRAL_API_KEY=your_key_here
-```
+Document uploads use local text extraction for searchable PDFs and plain-text files. Scanned/image-only documents are intentionally not sent to a paid OCR provider.
 
 Start both apps:
 

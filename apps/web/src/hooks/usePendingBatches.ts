@@ -101,6 +101,12 @@ export function usePendingBatches({
     const batch = pendingBatchesRef.current[batchId];
     if (!batch || batch.status !== "pending") return;
     acceptedBatchIdsRef.current.add(batchId);
+    // The model may still be streaming more tool calls while the user reviews
+    // this card. Close the active group immediately so later changes open a
+    // fresh confirmation message instead of being appended to an accepted one.
+    if (currentBatchIdRef.current === batchId) {
+      currentBatchIdRef.current = null;
+    }
 
     // Task changes update the task list first; other draft types are extracted
     // below because they belong to separate state/persistence paths.
@@ -145,6 +151,11 @@ export function usePendingBatches({
   }, [ddlsRef, setDdls, setNotes]);
 
   const handleRejectBatch = useCallback((batchId: string) => {
+    // Rejected cards are also terminal. Any later tool call in the same
+    // assistant turn must be reviewable in a new group.
+    if (currentBatchIdRef.current === batchId) {
+      currentBatchIdRef.current = null;
+    }
     setPendingBatches((prev) => {
       const batch = prev[batchId];
       if (!batch || batch.status !== "pending") return prev;

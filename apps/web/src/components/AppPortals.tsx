@@ -14,7 +14,7 @@ import QuotaWallModal from "@/components/QuotaWallModal";
 import RecurringTasksManager from "@/components/RecurringTasksManager";
 import TaskDetailDrawer, { type EditingTarget, type FormPayload } from "@/components/TaskDetailDrawer";
 import Portal from "@/components/ui/Portal";
-import { getNextResetAt } from "@/lib/usage";
+import { getDayResetAt } from "@/lib/usage";
 import type { BillingCycle, CardInfo, PlanId, Subscription } from "@/lib/billing";
 import type { DdlAttachment, DdlItem, Note } from "@/lib/types";
 
@@ -185,7 +185,7 @@ export default function AppPortals({
         open={quotaWallOpen || creditsWall !== null}
         mode={creditsWall !== null ? "credits" : "window"}
         creditsNeed={creditsWall ?? 0}
-        resetAt={getNextResetAt()}
+        resetAt={getDayResetAt()}
         canFallbackFlash={canFallbackFlash}
         onSwitchFlash={onSwitchFlash}
         onTopUp={onTopUp}

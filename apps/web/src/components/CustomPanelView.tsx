@@ -10,20 +10,19 @@
 // ============================================================
 
 import React, { useEffect, useRef, useState } from "react";
-import { Trash2, Eye, Edit3, FileText, Globe, AlertTriangle, LayoutGrid, Plus, BarChart3, PieChart as PieIcon, Hash, Timer, ListChecks, Grid3x3, Boxes } from "lucide-react";
+import { Trash2, Eye, Edit3, FileText, Globe, AlertTriangle, LayoutGrid, Plus, BarChart3, PieChart as PieIcon, Hash, Timer, ListChecks, Grid3x3, ExternalLink, RotateCw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { CustomPanel, CustomPanelKind, PanelModule, PanelModuleType } from "@/lib/types";
 import { EmptyPanel } from "./EmptyIllustrations";
 import ModuleRenderer from "./panel-modules/ModuleRenderer";
 import type { PanelDataCtx } from "@/lib/panel-data";
-import GeneratedPanelView from "./GeneratedPanelView";
-import { SAMPLE_SPEC, type GeneratedPanelSpec } from "@/lib/panel-schema";
 import { useT } from "@/lib/i18n";
+import { buildSandboxedWebApp, normalizePanelUrl } from "@/lib/panel-url";
 
 interface Props {
   panel: CustomPanel;
-  onUpdate: (id: string, patch: Partial<Pick<CustomPanel, "label" | "emoji" | "content" | "kind" | "url" | "modules" | "spec">>) => void;
+  onUpdate: (id: string, patch: Partial<Pick<CustomPanel, "label" | "emoji" | "content" | "kind" | "url" | "html" | "modules">>) => void;
   onDelete: (id: string) => void;
   /** [064] 模组数据绑定上下文（真实 ddls/notes/streak）*/
   dataCtx: PanelDataCtx;
@@ -41,13 +40,6 @@ const MODULE_PRESETS: { type: PanelModuleType; labelKey: string; titleKey: strin
 
 function mid(): string {
   return "mod-" + Math.random().toString(36).slice(2, 9);
-}
-
-function normalizeUrl(input: string): string {
-  const v = input.trim();
-  if (!v) return "";
-  if (/^https?:\/\//i.test(v)) return v;
-  return "https://" + v;
 }
 
 function KindBtn({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
@@ -68,7 +60,7 @@ function KindBtn({ active, onClick, icon, label }: { active: boolean; onClick: (
   );
 }
 
-type PanelPatch = Partial<Pick<CustomPanel, "label" | "emoji" | "content" | "kind" | "url" | "modules" | "spec">>;
+type PanelPatch = Partial<Pick<CustomPanel, "label" | "emoji" | "content" | "kind" | "url" | "html" | "modules">>;
 
 export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: Props) {
   const { t } = useT();
@@ -80,7 +72,11 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
   const [modules, setModules] = useState<PanelModule[]>(panel.modules ?? []);
   const [addOpen, setAddOpen] = useState(false);
   const [mode, setMode] = useState<"edit" | "preview">(panel.content ? "preview" : "edit");
+  const [iframeRevision, setIframeRevision] = useState(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const embeddedUrl = normalizePanelUrl(url);
+  const webAppHtml = buildSandboxedWebApp(panel.html ?? "");
+  const hasWebApp = Boolean(webAppHtml);
 
   // [055 F#1+F#3] 修复：
   //   #1 unmount 用 stale 闭包丢编辑 → 改用 ref 跟踪「上一个 panelId」+「累积 patch」
@@ -256,12 +252,6 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
             icon={<LayoutGrid size={12} />}
             label={t("cpv.kind.module")}
           />
-          <KindBtn
-            active={kind === "generated"}
-            onClick={() => onUpdate(panel.id, { kind: "generated", ...(panel.spec ? {} : { spec: SAMPLE_SPEC }) })}
-            icon={<Boxes size={12} />}
-            label={t("cpv.kind.app")}
-          />
         </div>
 
         {/* edit/preview 切换（仅 markdown 模式有意义）*/}
@@ -321,15 +311,22 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
             background: "var(--color-surface)",
           }}
         >
-          <Globe size={13} color="var(--color-text-muted)" />
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: "var(--color-primary)", whiteSpace: "nowrap" }}>
+            <Globe size={13} /> {t(hasWebApp ? "cpv.webAppBadge" : "cpv.webBadge")}
+          </span>
+          {hasWebApp ? (
+            <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: "var(--color-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {t("cpv.webAppSafe")}
+            </span>
+          ) : (
           <input
             value={url}
             onChange={(e) => { setUrl(e.target.value); scheduleSave({ url: e.target.value }); }}
             onBlur={(e) => {
               // blur 时规范化 + 立即保存
               // [055 F#4] 先取消 pending timer + 清累积 patch，避免 1.2s 后用未规范化 URL 覆盖
-              const v = normalizeUrl(e.target.value);
-              if (v !== e.target.value) {
+              const v = normalizePanelUrl(e.target.value);
+              if (v && v !== e.target.value) {
                 setUrl(v);
                 if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
                 pendingPatchRef.current = {};
@@ -345,24 +342,33 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
               outline: "none", fontFamily: "ui-monospace, monospace",
             }}
           />
+          )}
+          <button
+            type="button"
+            onClick={() => setIframeRevision((value) => value + 1)}
+            disabled={!embeddedUrl && !hasWebApp}
+            aria-label={t("cpv.reload")}
+            title={t("cpv.reload")}
+            style={{ width: 30, height: 30, display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--color-border)", borderRadius: 7, background: "var(--color-bg)", color: "var(--color-text-muted)", cursor: embeddedUrl || hasWebApp ? "pointer" : "not-allowed", opacity: embeddedUrl || hasWebApp ? 1 : 0.45 }}
+          >
+            <RotateCw size={13} />
+          </button>
+          {!hasWebApp && <a
+            href={embeddedUrl || undefined}
+            target="_blank"
+            rel="noreferrer noopener"
+            aria-disabled={!embeddedUrl}
+            title={t("cpv.openExternal")}
+            style={{ height: 30, padding: "0 9px", display: "inline-flex", alignItems: "center", gap: 5, border: "1px solid var(--color-border)", borderRadius: 7, background: "var(--color-bg)", color: "var(--color-text)", textDecoration: "none", fontSize: 11.5, fontWeight: 600, pointerEvents: embeddedUrl ? "auto" : "none", opacity: embeddedUrl ? 1 : 0.45, whiteSpace: "nowrap" }}
+          >
+            <ExternalLink size={13} /> {t("cpv.openExternal")}
+          </a>}
         </div>
       )}
 
       {/* Body */}
-      <div style={{ flex: 1, overflow: kind === "generated" ? "hidden" : "auto", padding: (kind === "iframe" || kind === "generated") ? 0 : "16px 20px", minHeight: 0 }}>
-        {kind === "generated" ? (
-          <GeneratedPanelView
-            spec={panel.spec ?? SAMPLE_SPEC}
-            onChange={(spec: GeneratedPanelSpec) =>
-              // 同步 spec.title/emoji 到面板 Tab，让 AI 生成的标题立刻反映到导航
-              onUpdate(panel.id, {
-                spec,
-                ...(spec.title ? { label: spec.title } : {}),
-                ...(spec.emoji ? { emoji: spec.emoji } : {}),
-              })
-            }
-          />
-        ) : kind === "modules" ? (
+      <div style={{ flex: 1, overflow: "auto", padding: kind === "iframe" ? 0 : "16px 20px", minHeight: 0 }}>
+        {kind === "modules" ? (
           <div style={{ maxWidth: 760, margin: "0 auto" }}>
             {/* 加模组工具条 */}
             <div style={{ position: "relative", marginBottom: 14 }}>
@@ -431,9 +437,19 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
             )}
           </div>
         ) : kind === "iframe" ? (
-          url.trim() ? (
+          hasWebApp ? (
             <iframe
-              src={normalizeUrl(url)}
+              key={`web-app-${iframeRevision}`}
+              srcDoc={webAppHtml}
+              title={panel.label}
+              sandbox="allow-scripts"
+              referrerPolicy="no-referrer"
+              style={{ width: "100%", height: "100%", minHeight: 520, border: "none", background: "#fff" }}
+            />
+          ) : embeddedUrl ? (
+            <iframe
+              key={`${embeddedUrl}-${iframeRevision}`}
+              src={embeddedUrl}
               title={panel.label}
               // SEC-06：去掉 allow-popups-to-escape-sandbox（真正危险：放任弹窗脱离沙箱）。
               // 保留嵌入仪表盘所需的 scripts/same-origin/forms/popups（外部源天然与本应用跨源隔离）。
@@ -451,9 +467,9 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
               padding: 32, textAlign: "center",
             }}>
               <Globe size={40} />
-              <p style={{ fontSize: 13, margin: 0 }}>{t("cpv.emptyIframe")}</p>
+              <p style={{ fontSize: 13, margin: 0 }}>{url.trim() ? t("cpv.invalidUrl") : t("cpv.emptyIframe")}</p>
               <p style={{ fontSize: 11, margin: 0, display: "inline-flex", alignItems: "center", gap: 5, color: "var(--color-warning)" }}>
-                <AlertTriangle size={11} /> Many large sites set X-Frame-Options and refuse embedding
+                <AlertTriangle size={11} /> {t("cpv.embedWarning")}
               </p>
             </div>
           )

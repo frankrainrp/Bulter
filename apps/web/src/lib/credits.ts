@@ -49,7 +49,7 @@ export function getPack(id: string): CreditPack | undefined {
 }
 
 /** 计价操作类型 */
-export type CreditOp = "chatPremium" | "generatePanel" | "research" | "ocr";
+export type CreditOp = "chatPremium" | "generatePanel" | "research";
 
 /**
  * 操作 → 积分价（变现方案 v2.0 §3.1）。
@@ -65,8 +65,6 @@ export function creditCostOf(op: CreditOp, model?: AiModelId): number {
       return 2;
     case "research":
       return 10;
-    case "ocr":
-      return 1; // 每 10 页
   }
 }
 

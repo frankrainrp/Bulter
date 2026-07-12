@@ -1,14 +1,7 @@
 "use client";
 
-// ============================================================
-// components/mini-apps/ShareCard.tsx — 学习报告分享卡(G3.2)
-//
-// 渲染本周完成度成竖版 SVG 海报(540×800,适合手机分享尺寸)
-// 用户右键 / 长按图片即可保存到相册
-// ============================================================
-
-import React, { useMemo } from "react";
-import { Share2 } from "lucide-react";
+import React, { useMemo, useRef, useState } from "react";
+import { Check, Download, Share2 } from "lucide-react";
 import type { DdlItem } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 
@@ -16,163 +9,265 @@ interface Props {
   ddls?: DdlItem[];
 }
 
+const CARD_WIDTH = 540;
+const CARD_HEIGHT = 760;
+
 function effStatus(d: DdlItem): "todo" | "in_progress" | "done" {
   return d.status ?? (d.completed ? "done" : "todo");
 }
 
+async function renderPng(svg: SVGSVGElement): Promise<Blob> {
+  const source = new XMLSerializer().serializeToString(svg);
+  const svgBlob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+  const objectUrl = URL.createObjectURL(svgBlob);
+
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await image.decode();
+
+    const scale = 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = CARD_WIDTH * scale;
+    canvas.height = CARD_HEIGHT * scale;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas is unavailable");
+    ctx.scale(scale, scale);
+    ctx.drawImage(image, 0, 0, CARD_WIDTH, CARD_HEIGHT);
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("PNG export failed")), "image/png", 0.96);
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = href;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(href), 1000);
+}
+
 export default function ShareCard({ ddls = [] }: Props) {
   const { t, lang } = useT();
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<"idle" | "saved" | "shared" | "error">("idle");
+
   const stats = useMemo(() => {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - 6);
     const totalDone = ddls.filter((d) => effStatus(d) === "done").length;
     const totalTodo = ddls.filter((d) => effStatus(d) !== "done").length;
     const weekDone = ddls.filter((d) => {
-      if (effStatus(d) !== "done") return false;
-      if (!d.dueDate) return false;
+      if (effStatus(d) !== "done" || !d.dueDate) return false;
       const ts = new Date(d.dueDate).getTime();
-      return ts >= weekStart.getTime() && ts <= today.getTime() + 86400000;
+      return ts >= weekStart.getTime() && ts < today.getTime() + 86400000;
     }).length;
 
-    // 7 天柱图数据
     const days: { iso: string; count: number; label: string }[] = [];
     for (let i = 0; i < 7; i++) {
-      const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
-      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const label = t(`dow.${d.getDay()}`);
-      const count = ddls.filter((it) => effStatus(it) === "done" && it.dueDate === iso).length;
-      days.push({ iso, count, label });
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + i);
+      const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      days.push({
+        iso,
+        label: t(`dow.${date.getDay()}`),
+        count: ddls.filter((item) => effStatus(item) === "done" && item.dueDate === iso).length,
+      });
     }
-    const maxDay = Math.max(1, ...days.map((d) => d.count));
-    return { totalDone, totalTodo, weekDone, days, maxDay };
+
+    return { totalDone, totalTodo, weekDone, days, maxDay: Math.max(1, ...days.map((d) => d.count)) };
   }, [ddls, t]);
 
-  const todayLabel = new Date().toLocaleDateString(lang === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "long", day: "numeric" });
+  const todayLabel = new Date().toLocaleDateString(lang === "zh" ? "zh-CN" : "en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const makePng = async () => {
+    if (!svgRef.current) throw new Error("Share card is not ready");
+    return renderPng(svgRef.current);
+  };
+
+  const handleDownload = async () => {
+    setBusy(true);
+    try {
+      downloadBlob(await makePng(), `butler-study-${new Date().toISOString().slice(0, 10)}.png`);
+      setStatus("saved");
+    } catch {
+      setStatus("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleShare = async () => {
+    setBusy(true);
+    try {
+      const blob = await makePng();
+      const file = new File([blob], "butler-study-card.png", { type: "image/png" });
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({ title: t("share.shareTitle"), text: t("share.slogan"), files: [file] });
+        setStatus("shared");
+      } else {
+        downloadBlob(blob, `butler-study-${new Date().toISOString().slice(0, 10)}.png`);
+        setStatus("saved");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setStatus("error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const feedback = status === "shared"
+    ? t("share.shared")
+    : status === "saved"
+      ? t("share.saved")
+      : status === "error"
+        ? t("share.error")
+        : t("share.saveHint");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div
         style={{
-          fontSize: 11,
-          color: "var(--color-text-muted)",
-          lineHeight: 1.5,
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "0 2px",
         }}
       >
-        <Share2 size={11} style={{ display: "inline", marginRight: 4, verticalAlign: "-2px" }} />
-        {t("share.saveHint")}
+        <div>
+          <div className="font-display" style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text)", lineHeight: 1.15 }}>
+            {t("mini.share")}
+          </div>
+          <p style={{ margin: "5px 0 0", fontSize: 12, lineHeight: 1.5, color: "var(--color-text-muted)" }}>
+            {feedback}
+          </p>
+        </div>
+        {(status === "saved" || status === "shared") && <Check size={18} color="var(--color-success)" aria-hidden />}
       </div>
 
-      {/* 540×800 海报,缩放 0.55 适配 320px 抽屉 */}
       <div
         style={{
+          position: "relative",
           width: "100%",
-          display: "flex",
-          justifyContent: "center",
+          aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+          overflow: "hidden",
+          border: "2px solid var(--color-border)",
+          borderRadius: "var(--radius-card)",
+          background: "#F4EEDC",
+          boxShadow: "var(--shadow-card)",
         }}
       >
-        <div
-          style={{
-            transform: "scale(0.55)",
-            transformOrigin: "top center",
-            marginBottom: -360, // 抵消缩放空白
-          }}
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${CARD_WIDTH} ${CARD_HEIGHT}`}
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-label={t("share.previewAria")}
+          style={{ display: "block", width: "100%", height: "100%" }}
         >
-          <svg width="540" height="800" xmlns="http://www.w3.org/2000/svg" style={{ display: "block", borderRadius: 12, boxShadow: "0 4px 16px rgba(0,0,0,0.10)" }}>
-            <defs>
-              <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#1B3D2F" />
-                <stop offset="100%" stopColor="#0F2418" />
-              </linearGradient>
-              <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.08" />
-                <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.04" />
-              </linearGradient>
-            </defs>
+          <defs>
+            <pattern id="paper-dots" width="18" height="18" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="1" fill="#253C32" opacity="0.07" />
+            </pattern>
+            <clipPath id="card-clip"><rect width={CARD_WIDTH} height={CARD_HEIGHT} rx="18" /></clipPath>
+          </defs>
 
-            {/* 背景 */}
-            <rect width="540" height="800" fill="url(#bg)" />
+          <g clipPath="url(#card-clip)">
+            <rect width={CARD_WIDTH} height={CARD_HEIGHT} fill="#F4EEDC" />
+            <rect width={CARD_WIDTH} height={CARD_HEIGHT} fill="url(#paper-dots)" />
+            <rect x="0" y="0" width="16" height={CARD_HEIGHT} fill="#315747" />
+            <path d="M390 -20 C450 45 470 110 560 140" fill="none" stroke="#C8B787" strokeWidth="28" opacity="0.4" />
 
-            {/* 顶部品牌 */}
-            <text x="50" y="68" fontFamily="Inter, system-ui" fontSize="14" fill="#94a3b8" letterSpacing="3">
+            <text x="48" y="64" fontFamily="Arial, 'Noto Sans SC', sans-serif" fontSize="13" fontWeight="700" fill="#315747" letterSpacing="2.2">
               {t("share.brand")}
             </text>
-            <text x="50" y="100" fontFamily="Inter, system-ui" fontSize="13" fill="#64748b">
+            <text x="48" y="91" fontFamily="Arial, 'Noto Sans SC', sans-serif" fontSize="12" fill="#756B58">
               {todayLabel}
             </text>
+            <rect x="420" y="46" width="72" height="34" rx="17" fill="#315747" />
+            <text x="456" y="68" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="12" fontWeight="700" fill="#F7F1E2">
+              07 DAYS
+            </text>
 
-            {/* Hero 数字 */}
-            <text x="50" y="200" fontFamily="Inter, system-ui" fontSize="20" fill="#cbd5e1">
+            <line x1="48" y1="124" x2="492" y2="124" stroke="#292820" strokeWidth="2" />
+            <text x="48" y="174" fontFamily="Georgia, 'Noto Serif SC', serif" fontSize="22" fill="#292820">
               {t("share.weekDone")}
             </text>
-            <text x="50" y="290" fontFamily="Inter, system-ui" fontSize="100" fontWeight="700" fill="#FFFFFF">
+            <text x="46" y="285" fontFamily="Georgia, 'Noto Serif SC', serif" fontSize="112" fontWeight="700" fill="#292820">
               {stats.weekDone}
             </text>
-            <text x={50 + (stats.weekDone < 10 ? 70 : stats.weekDone < 100 ? 130 : 190)} y="290" fontFamily="Inter, system-ui" fontSize="24" fill="#94a3b8">
+            <text x={stats.weekDone < 10 ? 128 : stats.weekDone < 100 ? 192 : 254} y="274" fontFamily="Arial, 'Noto Sans SC', sans-serif" fontSize="18" fill="#756B58">
               {t("share.tasksUnit")}
             </text>
 
-            {/* 累计 chip */}
-            <rect x="50" y="320" width="200" height="42" rx="21" fill="url(#card)" stroke="rgba(255,255,255,0.15)" />
-            <text x="68" y="347" fontFamily="Inter, system-ui" fontSize="14" fill="#cbd5e1">
-              {t("share.totalDone")}
-            </text>
-            <text x="156" y="348" fontFamily="Inter, system-ui" fontSize="18" fontWeight="700" fill="#FFFFFF">
-              {stats.totalDone}
-            </text>
+            <g transform="translate(48 322)">
+              <rect width="208" height="68" rx="8" fill="#E2D9BD" stroke="#292820" strokeWidth="2" />
+              <text x="18" y="28" fontFamily="Arial, 'Noto Sans SC', sans-serif" fontSize="12" fill="#756B58">{t("share.totalDone")}</text>
+              <text x="18" y="53" fontFamily="Georgia, serif" fontSize="24" fontWeight="700" fill="#292820">{stats.totalDone}</text>
+            </g>
+            <g transform="translate(276 322)">
+              <rect width="216" height="68" rx="8" fill="#DCE7DC" stroke="#292820" strokeWidth="2" />
+              <text x="18" y="28" fontFamily="Arial, 'Noto Sans SC', sans-serif" fontSize="12" fill="#5D6C62">{t("share.inProgress")}</text>
+              <text x="18" y="53" fontFamily="Georgia, serif" fontSize="24" fontWeight="700" fill="#292820">{stats.totalTodo}</text>
+            </g>
 
-            <rect x="260" y="320" width="200" height="42" rx="21" fill="url(#card)" stroke="rgba(255,255,255,0.15)" />
-            <text x="278" y="347" fontFamily="Inter, system-ui" fontSize="14" fill="#cbd5e1">
-              {t("share.inProgress")}
-            </text>
-            <text x="343" y="348" fontFamily="Inter, system-ui" fontSize="18" fontWeight="700" fill="#FFFFFF">
-              {stats.totalTodo}
-            </text>
-
-            {/* 7 天柱图 */}
-            <text x="50" y="430" fontFamily="Inter, system-ui" fontSize="13" fill="#94a3b8" letterSpacing="1">
+            <text x="48" y="440" fontFamily="Arial, 'Noto Sans SC', sans-serif" fontSize="12" fontWeight="700" fill="#315747" letterSpacing="1.6">
               {t("share.trend7")}
             </text>
-            {stats.days.map((d, idx) => {
-              const x = 50 + idx * 64;
-              const h = (d.count / stats.maxDay) * 140;
+            <line x1="48" y1="600" x2="492" y2="600" stroke="#B9AD8D" strokeWidth="1" />
+            {stats.days.map((day, index) => {
+              const x = 52 + index * 63;
+              const height = Math.max(day.count > 0 ? 14 : 4, (day.count / stats.maxDay) * 118);
               return (
-                <g key={d.iso}>
-                  <rect
-                    x={x}
-                    y={580 - h}
-                    width={48}
-                    height={h}
-                    rx={4}
-                    fill={d.count > 0 ? "#5FB58F" : "#334155"}
-                  />
-                  <text x={x + 24} y={605} fontFamily="Inter, system-ui" fontSize="12" fill="#94a3b8" textAnchor="middle">
-                    {d.label}
-                  </text>
-                  {d.count > 0 && (
-                    <text x={x + 24} y={573 - h} fontFamily="Inter, system-ui" fontSize="11" fill="#FFFFFF" textAnchor="middle">
-                      {d.count}
-                    </text>
-                  )}
+                <g key={day.iso}>
+                  <rect x={x} y={600 - height} width="38" height={height} rx="4" fill={day.count > 0 ? "#315747" : "#CFC4A8"} />
+                  <text x={x + 19} y="625" textAnchor="middle" fontFamily="Arial, 'Noto Sans SC', sans-serif" fontSize="11" fill="#756B58">{day.label}</text>
+                  {day.count > 0 && <text x={x + 19} y={587 - height} textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="11" fontWeight="700" fill="#315747">{day.count}</text>}
                 </g>
               );
             })}
 
-            {/* Footer */}
-            <line x1="50" y1="680" x2="490" y2="680" stroke="rgba(255,255,255,0.10)" />
-            <text x="50" y="720" fontFamily="Inter, system-ui" fontSize="14" fontWeight="500" fill="#cbd5e1">
+            <line x1="48" y1="666" x2="492" y2="666" stroke="#292820" strokeWidth="2" />
+            <text x="48" y="705" fontFamily="Georgia, 'Noto Serif SC', serif" fontSize="17" fontWeight="700" fill="#292820">
               {t("share.slogan")}
             </text>
-            <text x="50" y="752" fontFamily="Inter, system-ui" fontSize="11" fill="#64748b">
+            <text x="48" y="732" fontFamily="Arial, 'Noto Sans SC', sans-serif" fontSize="10" fill="#756B58">
               {t("share.footer")}
             </text>
-
-            {/* Logo 小图标占位(墨绿圆) */}
-            <circle cx="468" cy="734" r="22" fill="#5FB58F" />
-            <text x="468" y="742" fontFamily="Inter, system-ui" fontSize="16" fontWeight="700" fill="#0F2418" textAnchor="middle">B</text>
-          </svg>
-        </div>
+            <circle cx="466" cy="712" r="25" fill="#315747" />
+            <text x="466" y="720" textAnchor="middle" fontFamily="Georgia, serif" fontSize="23" fontWeight="700" fill="#F4EEDC">B</text>
+          </g>
+        </svg>
       </div>
-    </div>
+
+      {ddls.length === 0 && (
+        <div style={{ padding: "9px 11px", border: "1px dashed var(--color-border)", borderRadius: 8, fontSize: 11.5, color: "var(--color-text-muted)" }}>
+          {t("share.empty")}
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <button className="glass-btn" type="button" onClick={() => void handleDownload()} disabled={busy} style={{ minHeight: 40, justifyContent: "center", gap: 7, fontSize: 12.5, fontFamily: "inherit" }}>
+          <Download size={15} /> {busy ? t("share.preparing") : t("share.download")}
+        </button>
+        <button className="glass-btn glass-btn-primary" type="button" onClick={() => void handleShare()} disabled={busy} style={{ minHeight: 40, justifyContent: "center", gap: 7, fontSize: 12.5, fontFamily: "inherit" }}>
+          <Share2 size={15} /> {t("share.share")}
+        </button>
+      </div>
+    </section>
   );
 }

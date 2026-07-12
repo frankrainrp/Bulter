@@ -23,8 +23,12 @@ function dispatchChange() {
 
 export async function getAllCustomPanels(): Promise<CustomPanel[]> {
   const list = await CallPanelApi<CustomPanel[]>("/custom-panels");
+  const current = list.filter((panel) => {
+    const raw = panel as unknown as { kind?: string; spec?: unknown };
+    return raw.kind !== "generated" && !("spec" in raw);
+  });
   // 按 createdAt 升序（"先创建的在前"，匹配 Tab 顺序心智）
-  return list.sort((a, b) => a.createdAt - b.createdAt);
+  return current.sort((a, b) => a.createdAt - b.createdAt);
 }
 
 export async function getCustomPanel(id: string): Promise<CustomPanel | undefined> {
@@ -49,12 +53,13 @@ export async function createCustomPanel(label: string, emoji: string = "📋"): 
 
 export async function updateCustomPanel(
   id: string,
-  patch: Partial<Pick<CustomPanel, "label" | "emoji" | "content" | "kind" | "url" | "modules" | "spec">>,
+  patch: Partial<Pick<CustomPanel, "label" | "emoji" | "content" | "kind" | "url" | "html" | "modules">>,
 ): Promise<void> {
   const next: Partial<CustomPanel> = { ...patch, updatedAt: Date.now() };
   if (patch.label !== undefined) next.label = patch.label.slice(0, 12).trim() || "New panel";
   if (patch.emoji !== undefined) next.emoji = (patch.emoji || "📋").slice(0, 3);
   if (patch.url !== undefined) next.url = patch.url.trim();
+  if (patch.html !== undefined) next.html = patch.html.trim();
   await CallPanelApi<CustomPanel>(`/custom-panels/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: JSON.stringify(next),

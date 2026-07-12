@@ -86,7 +86,6 @@ export function useChatSessions({
           role: "user",
           content: `Create a concise 4-8 word English title for the conversation below. Output only the title text, with no explanation, punctuation, quotes, emoji, prefix, or suffix.\n\nUser:${userText.slice(0, 200)}\nAI:${assistantText.slice(0, 200)}`,
         }],
-        userName: "Feng",
         includeTools: false,
         model: "deepseek-v4-flash",
         executeToolCall: async () => ({ ok: false, message: "not allowed" }),

@@ -17,7 +17,6 @@ const SessionSchema = new Schema<SessionDoc>(
   { timestamps: true },
 );
 
-SessionSchema.index({ sessionId: 1 }, { unique: true });
 SessionSchema.index({ userId: 1 });
 SessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 

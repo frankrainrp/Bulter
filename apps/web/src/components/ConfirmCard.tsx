@@ -27,14 +27,13 @@ export default function ConfirmCard({ batch, onAccept, onReject, onDropChange }:
 
   const borderColor = isPending ? "var(--color-primary)" : "var(--color-border)";
   return (
-    <div style={{ width: "100%", maxWidth: 620, minWidth: 0, maxHeight: "min(72vh, 640px)" }}>
-      <div style={{ position: "relative", maxHeight: "inherit" }}>
+    <div style={{ width: "100%", maxWidth: 620, minWidth: 0 }}>
+      <div style={{ position: "relative" }}>
         <div
           style={{
             position: "relative",
             display: "flex",
             flexDirection: "column",
-            maxHeight: "inherit",
             background: "var(--color-surface)",
             border: `1.5px solid ${borderColor}`,
             borderRadius: "var(--radius-card)",
@@ -70,9 +69,6 @@ export default function ConfirmCard({ batch, onAccept, onReject, onDropChange }:
                 gap: 6,
                 borderTop: "1px solid var(--color-border-soft)",
                 paddingTop: 12,
-                overflowY: "auto",
-                maxHeight: "min(46vh, 420px)",
-                paddingRight: 4,
               }}
             >
               {batch.changes.map((ch) => (
@@ -323,11 +319,12 @@ function describeChange(ch: PendingChange, t: TFunc): {
   if (ch.kind === "create-custom-panel") {
     const p = ch.panelDraft;
     const isIframe = p.kind === "iframe";
+    const isWebApp = isIframe && Boolean(p.html);
     return {
       icon: <LayoutGrid size={13} />,
       bg: "rgba(245,158,11,0.14)", // 琥珀黄区别于 task/note
       fg: "#B45309",
-      subline: `${isIframe ? t("cc.embed") : t("cc.panel")} · ${p.emoji} ${p.label}${isIframe ? ` · ${p.url}` : p.content ? ` · ${t("cc.charsN", { n: p.content.length })}` : ""}`,
+      subline: `${isWebApp ? t("cc.webApp") : isIframe ? t("cc.embed") : t("cc.panel")} · ${p.emoji} ${p.label}${isWebApp ? ` · ${t("cc.charsN", { n: p.html!.length })}` : isIframe ? ` · ${p.url}` : p.content ? ` · ${t("cc.charsN", { n: p.content.length })}` : ""}`,
     };
   }
   return {

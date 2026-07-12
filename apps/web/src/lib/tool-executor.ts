@@ -26,6 +26,7 @@ import {
 } from "./ai-tools";
 import { makeChangeId, type PendingChange } from "./pending";
 import { makeRecurring, CADENCE_LABEL } from "./recurring";
+import { normalizePanelHtml, normalizePanelUrl } from "./panel-url";
 
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 
@@ -331,29 +332,20 @@ function execCreateCustomPanel(args: CreateCustomPanelArgs, { addPending }: Tool
   if (!args.label || !args.label.trim()) {
     return { ok: false, message: "create_custom_panel needs label" };
   }
-
-  const kind: "markdown" | "iframe" | "modules" =
-    args.kind === "iframe" ? "iframe" : args.kind === "modules" ? "modules" : "markdown";
-  if (kind === "iframe" && (!args.url || !args.url.trim())) {
-    return { ok: false, message: "kind=iframe needs url" };
-  }
-  if (kind === "modules" && (!args.modules || args.modules.length === 0)) {
-    return { ok: false, message: "kind=modules needs at least one module" };
-  }
+  const url = normalizePanelUrl(args.url || "");
+  const html = normalizePanelHtml(args.html || "");
+  if (url && html) return { ok: false, message: "create_custom_panel needs exactly one of url or html" };
+  if (!url && !html) return { ok: false, message: "create_custom_panel needs a valid HTTPS url or complete self-contained html" };
 
   const now = Date.now();
-  const modules =
-    kind === "modules" && args.modules
-      ? args.modules.map((m) => ({ id: "mod-" + uid(), type: m.type, title: m.title, config: m.config }))
-      : undefined;
   const panelDraft: CustomPanel = {
     id: "custom-" + uid(),
     label: args.label.slice(0, 12).trim() || "New panel",
-    emoji: (args.emoji || "📋").slice(0, 3),
-    content: args.content ?? "",
-    kind,
-    ...(kind === "iframe" && args.url ? { url: args.url.trim() } : {}),
-    ...(modules ? { modules } : {}),
+    emoji: (args.emoji || "🌐").slice(0, 3),
+    content: "",
+    kind: "iframe",
+    ...(url ? { url } : {}),
+    ...(html ? { html } : {}),
     createdAt: now,
     updatedAt: now,
   };
@@ -361,15 +353,15 @@ function execCreateCustomPanel(args: CreateCustomPanelArgs, { addPending }: Tool
   addPending({
     id: makeChangeId(),
     kind: "create-custom-panel",
-    summary: kind === "modules"
-      ? `${panelDraft.emoji} ${panelDraft.label} (${modules!.length} modules)`
-      : `${panelDraft.emoji} ${panelDraft.label}`,
+    summary: url
+      ? `${panelDraft.emoji} ${panelDraft.label} · ${new URL(url).hostname}`
+      : `${panelDraft.emoji} ${panelDraft.label} · interactive web app`,
     panelDraft,
   });
   return {
     ok: true,
-    message: `Created a custom panel draft: "${panelDraft.label}" (${kind}). It was added to the review queue.`,
-    data: { id: panelDraft.id, label: panelDraft.label, kind },
+    message: `Created an interactive Web Panel draft: "${panelDraft.label}". It was added to the review queue.`,
+    data: { id: panelDraft.id, label: panelDraft.label, kind: "iframe", source: url ? "url" : "html" },
   };
 }
 

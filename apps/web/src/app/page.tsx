@@ -5,7 +5,7 @@
 // ============================================================
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import AuthGate from "@/components/AuthGate";
+import AuthGate, { useAuthProfile } from "@/components/AuthGate";
 import TopBar from "@/components/layout/TopBar";
 import LeftRail from "@/components/layout/LeftRail";
 import MiniAppsDrawer from "@/components/MiniAppsDrawer";
@@ -62,6 +62,7 @@ export default function HomePage() {
 function ButlerApp() {
   const toast = useToast();
   const { t } = useT();
+  const authProfile = useAuthProfile();
   const [activeNav, setActiveNav] = useState<NavId>("chat");
   // 手机响应式：窄屏布局 + 左栏抽屉开关
   const isMobile = useIsMobile();
@@ -265,6 +266,7 @@ function ButlerApp() {
     runRealPipeline,
     executeToolCall,
     selectedModel,
+    userName: authProfile.name,
     openQuotaWall,
     openCreditsWall,
     resetCurrentBatch,
@@ -560,6 +562,7 @@ function ButlerApp() {
               hasAnyData={ddls.length > 0 || notes.length > 0}
               streakDays={streakDays}
               bestHourLabel={bestHourLabel}
+              userEmail={authProfile.email}
               onStartFocus={handleStartFocus}
             />
           )}

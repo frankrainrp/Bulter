@@ -4,7 +4,7 @@
 // AI 通过 5 个工具完成对全局 ddls 列表的 CRUD + 查询
 // ============================================================
 
-import type { DdlItem, Note, TaskStatus, TaskPriority, PanelModuleType, PanelModuleConfig, RecurringCadence } from "./types";
+import type { DdlItem, Note, TaskStatus, TaskPriority, RecurringCadence } from "./types";
 
 // OpenAI / DeepSeek tool 定义格式
 export interface ToolDefinition {
@@ -263,86 +263,34 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
 
-  // ---- 7. 创建自定义面板（[054] Phase E 扩展，D.3）----
+  // ---- 7. 创建可交互网页面板 ----
   {
     type: "function",
     function: {
       name: "create_custom_panel",
       description:
-        "Create a custom panel after the four built-in top tabs. Use this for:" +
-        "requests such as creating a panel named X, opening a new tab for Y, embedding a website, or building a dashboard." +
-        "kind=markdown is for written content; kind=iframe is for embedded websites;" +
-        "**kind=modules is for data dashboards** made from chart, statistic, and list modules." +
-        "Modules automatically bind to real task, note, and streak data. Prefer modules for study dashboards, progress boards, or stats panels." +
+        "Create an interactive Web Panel after the built-in top tabs. For an existing website, provide its complete HTTPS url. " +
+        "For a requested mini app or game such as 2048, calculator, flashcards, or quiz, provide a complete self-contained HTML document in html with inline CSS and JavaScript and no external dependencies. " +
+        "Provide exactly one of url or html. Never claim an app was created unless the full working HTML is included in the tool call. " +
         "The panel goes through review and appears in the top bar only after the user accepts it.",
       parameters: {
         type: "object",
         properties: {
           label: {
             type: "string",
-            description: "Tab label, 2-24 characters, e.g. \"Reading List\", \"Study Board\", or \"Final Review\".",
+            description: "Short tab label, e.g. \"MDN\", \"Course portal\", or \"Study music\".",
           },
           emoji: {
             type: "string",
-            description: "Single emoji prefix for the tab, e.g. 📚 / 📊 / 📝 / 🎯. Defaults to 📋.",
-          },
-          kind: {
-            type: "string",
-            enum: ["markdown", "iframe", "modules"],
-            description: "Panel type: markdown=Markdown document; iframe=embedded website; modules=data dashboard. Defaults to markdown.",
-          },
-          content: {
-            type: "string",
-            description: "Initial Markdown content for kind=markdown; may be omitted.",
+            description: "Single emoji prefix for the tab. Defaults to 🌐.",
           },
           url: {
             type: "string",
-            description: "URL for kind=iframe, http or https. Ignored for other kinds.",
+            description: "Complete HTTPS URL for the website to embed.",
           },
-          modules: {
-            type: "array",
-            description:
-              "Module list for kind=modules. Combine modules as needed; order is display order." +
-              "Visualizations and stats bind to the user's real data. A study board can combine:" +
-              "[active-task stat, nearest-deadline countdown, task-status pie chart, 7-day due bar chart, task heatmap, in-progress list].",
-            items: {
-              type: "object",
-              properties: {
-                type: {
-                  type: "string",
-                  enum: ["stat", "countdown", "tasklist", "pie", "bar", "heatmap"],
-                  description:
-                    "stat=large-number KPI; countdown=deadline countdown; tasklist=task list; pie=pie chart; bar=bar chart; heatmap=task heatmap.",
-                },
-                title: { type: "string", description: "Short module title." },
-                config: {
-                  type: "object",
-                  description: "Module config, depending on type.",
-                  properties: {
-                    metric: {
-                      type: "string",
-                      enum: [
-                        "tasks-total", "tasks-done", "tasks-active", "tasks-today",
-                        "notes-total", "streak-current", "streak-longest",
-                        "completion-7d", "tasks-by-status", "tasks-by-source",
-                      ],
-                      description:
-                        "Bind to a real data metric. stat uses single-value metrics such as tasks-active or streak-current;" +
-                        "pie/bar use series metrics such as tasks-by-status, tasks-by-source, or completion-7d.",
-                    },
-                    filter: {
-                      type: "string",
-                      enum: ["active", "today", "upcoming", "completed", "all"],
-                      description: "Filter range for tasklist.",
-                    },
-                    targetDate: { type: "string", description: "Target date YYYY-MM-DD for countdown; omit for the nearest unfinished deadline." },
-                    unit: { type: "string", description: "Unit label for stat cards, e.g. \"items\" or \"days\"." },
-                    limit: { type: "number", description: "Maximum items to show in tasklist. Defaults to 6." },
-                  },
-                },
-              },
-              required: ["type"],
-            },
+          html: {
+            type: "string",
+            description: "Complete self-contained HTML for an interactive mini app. Include all CSS and JavaScript inline; do not use external assets or APIs.",
           },
         },
         required: ["label"],
@@ -464,11 +412,8 @@ export interface DeleteNoteArgs {
 export interface CreateCustomPanelArgs {
   label: string;
   emoji?: string;
-  kind?: "markdown" | "iframe" | "modules";
-  content?: string;
   url?: string;
-  /** [064] kind=modules 时的模组规格（AI 不传 id，executor 补）*/
-  modules?: { type: PanelModuleType; title?: string; config?: PanelModuleConfig }[];
+  html?: string;
 }
 
 export interface CreateRecurringTaskArgs {

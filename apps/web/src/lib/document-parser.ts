@@ -1,23 +1,21 @@
 // ============================================================
-// lib/document-parser.ts — client document parsing for PDF, images, and OCR.
+// lib/document-parser.ts — local text extraction for text-layer PDFs and plain text files.
 //
 // Routing:
-//   - Text PDFs    -> local unpdf parsing.
-//   - Scanned PDFs -> /api/ocr through the configured OCR provider.
-//   - image/*      -> /api/ocr through the configured OCR provider.
-//   - Other files  -> unsupported-file error.
+//   - Text PDFs -> local unpdf parsing.
+//   - text/*    -> browser File.text().
+//   - Scans and images are intentionally unsupported: no paid OCR dependency.
 // ============================================================
 
 import { extractText, getDocumentProxy } from "unpdf";
-import { runOcr } from "./ocr";
 
-export type ParseSource = "unpdf" | "ocr-mistral" | "ocr-deepseek-vl" | "ocr-tesseract";
+export type ParseSource = "unpdf" | "text";
 
 export type ParseResult =
   | { ok: true; text: string; pages: number; source: ParseSource }
-  | { ok: false; error: string; needsConfig?: boolean };
+  | { ok: false; error: string };
 
-// If unpdf extracts less than this many non-space characters, fall back to OCR.
+// Below this threshold the PDF is probably scanned or image-only.
 const SCANNED_TEXT_THRESHOLD = 50;
 
 export async function parseDocument(file: File): Promise<ParseResult> {
@@ -30,40 +28,23 @@ export async function parseDocument(file: File): Promise<ParseResult> {
     if (local.ok && local.text.replace(/\s+/g, "").length >= SCANNED_TEXT_THRESHOLD) {
       return { ok: true, text: local.text, pages: local.pages, source: "unpdf" };
     }
-    const ocr = await runOcr(file);
-    if (ocr.ok !== true) {
-      return {
-        ok: false,
-        error: `This PDF appears to be scanned. unpdf extracted only ${local.ok ? local.text.length : 0} characters, so OCR is required: ${ocr.error}`,
-        needsConfig: ocr.needsConfig,
-      };
-    }
     return {
-      ok: true,
-      text: ocr.text,
-      pages: ocr.pages,
-      source: `ocr-${ocr.provider}` as ParseSource,
+      ok: false,
+      error: `This PDF has no usable text layer (${local.ok ? local.text.length : 0} extracted characters). Scanned or image-only documents are not supported; export a searchable PDF first.`,
     };
   }
 
-  // ---- image/* ----
-  if (mime.startsWith("image/") || /\.(jpe?g|png|webp|gif|bmp|tiff?|heic|heif)$/i.test(name)) {
-    const ocr = await runOcr(file);
-    if (ocr.ok !== true) {
-      return { ok: false, error: ocr.error, needsConfig: ocr.needsConfig };
-    }
-    return {
-      ok: true,
-      text: ocr.text,
-      pages: ocr.pages,
-      source: `ocr-${ocr.provider}` as ParseSource,
-    };
+  // ---- Plain text ----
+  if (mime.startsWith("text/") || /\.(txt|md|csv|json)$/i.test(name)) {
+    const text = await file.text();
+    if (!text.trim()) return { ok: false, error: "The text file is empty." };
+    return { ok: true, text, pages: 1, source: "text" };
   }
 
   // ---- Other document types are not supported yet. ----
   return {
     ok: false,
-    error: `Unsupported file type: ${mime || name}. Current support: PDF and image/*. DOCX/PPT support is planned for a later pass.`,
+    error: `Unsupported file type: ${mime || name}. Current support: searchable PDF, TXT, Markdown, CSV, and JSON.`,
   };
 }
 

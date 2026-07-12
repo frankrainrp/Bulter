@@ -6,7 +6,7 @@
 import type { DdlItem, PipelineStep, UploadedFile } from "./types";
 
 export const INITIAL_STEPS: PipelineStep[] = [
-  { id: "ocr", label: "Parse document with OCR", status: "pending" },
+  { id: "ocr", label: "Extract document text", status: "pending" },
   { id: "extract", label: "Extract DDL items with AI", status: "pending" },
   { id: "calendar", label: "Write to calendar", status: "pending" },
   { id: "persist", label: "Save to database", status: "pending" },
@@ -20,7 +20,7 @@ const STEP_DURATIONS: Record<PipelineStep["id"], number> = {
 };
 
 const STEP_DETAILS: Record<PipelineStep["id"], string> = {
-  ocr: "Marker → Markdown",
+  ocr: "Local PDF/text extraction",
   extract: "DeepSeek-V4 Flash Structured Output",
   calendar: "Google Calendar API (write-only)",
   persist: "Drizzle ORM → PostgreSQL",

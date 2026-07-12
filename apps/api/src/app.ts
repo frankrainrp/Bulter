@@ -11,21 +11,28 @@ import { GenerateSourceRoutes } from "./routes/GenerateSourceRoutes.js";
 import { GeneratePanelRoutes } from "./routes/GeneratePanelRoutes.js";
 import { HealthRoutes } from "./routes/HealthRoutes.js";
 import { NoteRoutes } from "./routes/NoteRoutes.js";
-import { OcrRoutes } from "./routes/OcrRoutes.js";
 import { RecurringRoutes } from "./routes/RecurringRoutes.js";
 import { ResearchRoutes } from "./routes/ResearchRoutes.js";
 import { StorageRoutes } from "./routes/StorageRoutes.js";
 import { TaskRoutes } from "./routes/TaskRoutes.js";
 import { ErrorMiddleware } from "./middleware/ErrorMiddleware.js";
 import { RequireAuth } from "./middleware/AuthMiddleware.js";
-import { CreateRateLimit } from "./middleware/RateLimitMiddleware.js";
+import { CreateDailyRateLimit, CreateRateLimit } from "./middleware/RateLimitMiddleware.js";
 
 export function CreateApp() {
   const env = GetEnv();
   const app = express();
   const authRateLimit = CreateRateLimit({ name: "auth", windowMs: 15 * 60 * 1000, max: 40 });
-  const aiRateLimit = CreateRateLimit({ name: "ai", windowMs: 60 * 1000, max: 20 });
-  const uploadRateLimit = CreateRateLimit({ name: "upload", windowMs: 60 * 1000, max: 12 });
+  const dailyAiRateLimit = CreateDailyRateLimit({ name: "ai-daily", max: 1000 });
+  const chatRateLimit = CreateRateLimit({
+    name: "chat-completion",
+    windowMs: 60 * 1000,
+    max: 100,
+    identity: "user",
+    message: "Chat is receiving requests too quickly. Please wait briefly before retrying.",
+  });
+  const generationRateLimit = CreateRateLimit({ name: "generation", windowMs: 60 * 1000, max: 60, identity: "user" });
+  const connectorRateLimit = CreateRateLimit({ name: "connector", windowMs: 60 * 1000, max: 120, identity: "user" });
 
   app.use(cors({ origin: env.CorsOrigin, credentials: true }));
   app.use(express.json({ limit: "5mb" }));
@@ -34,19 +41,22 @@ export function CreateApp() {
   app.use("/api/auth/login", authRateLimit);
   app.use("/api/auth/signup", authRateLimit);
   app.use("/api/auth", AuthRoutes);
-  app.use("/api/chat", RequireAuth, aiRateLimit, ChatRoutes);
-  app.use("/api/connector", RequireAuth, aiRateLimit, ConnectorRoutes);
+  // History reads/writes are ordinary persistence traffic and must never consume
+  // the AI completion quota. Only POST /api/chat reaches the model limiters.
+  app.use("/api/chat", RequireAuth);
+  app.post("/api/chat", chatRateLimit, dailyAiRateLimit);
+  app.use("/api/chat", ChatRoutes);
+  app.use("/api/connector", RequireAuth, connectorRateLimit, dailyAiRateLimit, ConnectorRoutes);
   app.use("/api/custom-panels", RequireAuth, CustomPanelRoutes);
-  app.use("/api/extract-ddls", RequireAuth, aiRateLimit, ExtractDdlRoutes);
-  app.use("/api/generate-panel", RequireAuth, aiRateLimit, GeneratePanelRoutes);
-  app.use("/api/generate-source", RequireAuth, aiRateLimit, GenerateSourceRoutes);
-  app.use("/api/research", RequireAuth, aiRateLimit, ResearchRoutes);
+  app.use("/api/extract-ddls", RequireAuth, generationRateLimit, dailyAiRateLimit, ExtractDdlRoutes);
+  app.use("/api/generate-panel", RequireAuth, generationRateLimit, dailyAiRateLimit, GeneratePanelRoutes);
+  app.use("/api/generate-source", RequireAuth, generationRateLimit, dailyAiRateLimit, GenerateSourceRoutes);
+  app.use("/api/research", RequireAuth, generationRateLimit, dailyAiRateLimit, ResearchRoutes);
   app.use("/api/tasks", RequireAuth, TaskRoutes);
   app.use("/api/notes", RequireAuth, NoteRoutes);
-  app.use("/api/ocr", RequireAuth, uploadRateLimit, OcrRoutes);
   app.use("/api/recurring", RequireAuth, RecurringRoutes);
   app.use("/api/storage", RequireAuth, StorageRoutes);
-  app.use("/api/agent", RequireAuth, aiRateLimit, AgentRoutes);
+  app.use("/api/agent", RequireAuth, generationRateLimit, dailyAiRateLimit, AgentRoutes);
 
   app.use(ErrorMiddleware);
 

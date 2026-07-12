@@ -68,4 +68,4 @@ Required integrations:
 
 - `MONGO_URL` for MongoDB.
 - `DEEPSEEK_API_KEY` for chat and AI generation.
-- `MISTRAL_API_KEY` for OCR.
+- Document text extraction runs locally in the web app; the API only receives extracted text for AI understanding.

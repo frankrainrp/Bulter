@@ -1,10 +1,9 @@
 "use client";
 
 // ============================================================
-// lib/usage.ts — 真实成本计量层（5 小时滑动窗口 + 周用量）
-// [087] 变现方案 P1；[089] 加周用量（模仿 Claude：5h 窗口 + 每周上限两层）。
-//   每个模型按 token 真实成本折 ¥，同时累计到「当前 5h 窗口」与「本周」。
-//   窗口/周翻篇即清零（用不完不累积）。详见 Doc/变现方案.md §2。
+// lib/usage.ts — 真实成本计量层（自然日额度 + 周用量）
+// 每个模型按 token 真实成本折 ¥，同时累计到「今天」与「本周」。
+// 每日额度在设备本地时间午夜重置，不再使用 5 小时窗口。
 //
 // chat 路由开 stream_options.include_usage → 流尾返回 usage →
 //   chat-client 调 recordUsage(model, prompt_tokens, completion_tokens)。
@@ -26,27 +25,28 @@ export const COST_PER_K: Record<AiModelId, { in: number; out: number; inCacheHit
   claude:                 { in: 0.0216,                 out: 0.108 },
 };
 
-export const WINDOW_HOURS = 5;
-const WINDOW_MS = WINDOW_HOURS * 3600 * 1000;
-/** 每 5h 窗口免费额度（¥）。日额度 ≈ 3 ÷ (24/5) ≈ ¥0.625 → 取 ¥0.6 */
-export const WINDOW_BUDGET = 0.6;
+/** 每个自然日的免费额度（¥）。 */
+export const DAILY_BUDGET = 3;
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 /** 每周免费额度上限（¥）。≈ ¥0.6/窗 × 4.8 窗/天 × 7 ≈ ¥20（周维度兜底，模仿 Claude）*/
 export const WEEKLY_BUDGET = 20;
 
 export const USAGE_EVENT = "butler:usage-change";
-const WIN_PREFIX = "butler.usage.win.";
+const DAY_PREFIX = "butler.usage.day.";
+const LEGACY_WIN_PREFIX = "butler.usage.win.";
 const WEEK_PREFIX = "butler.usage.week.";
 
-// ---------- 时间窗口 ----------
-/** 当前 5h 窗口起点（按网格对齐，跨午夜/时区无缝）*/
-export function getWindowStart(now = Date.now()): number {
-  return Math.floor(now / WINDOW_MS) * WINDOW_MS;
+// ---------- 自然日 ----------
+/** 当前设备本地自然日的起点。 */
+export function getDayStart(now = Date.now()): number {
+  const date = new Date(now);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }
-/** 当前窗口结束（= 下次回满）时间戳 */
-export function getNextResetAt(now = Date.now()): number {
-  return getWindowStart(now) + WINDOW_MS;
+/** 下一次每日额度重置时间（本地午夜）。 */
+export function getDayResetAt(now = Date.now()): number {
+  const date = new Date(now);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getTime();
 }
 /** 本周起点（7 天网格对齐）*/
 export function getWeekStart(now = Date.now()): number {
@@ -57,8 +57,8 @@ export function getWeekResetAt(now = Date.now()): number {
   return getWeekStart(now) + WEEK_MS;
 }
 
-function winKey(now = Date.now()): string {
-  return WIN_PREFIX + getWindowStart(now);
+function dayKey(now = Date.now()): string {
+  return DAY_PREFIX + getDayStart(now);
 }
 function weekKey(now = Date.now()): string {
   return WEEK_PREFIX + getWeekStart(now);
@@ -96,19 +96,19 @@ function readNum(key: string): number {
   }
 }
 
-/** 当前窗口已花 ¥ */
-export function getWindowSpend(now = Date.now()): number {
+/** 今日已花 ¥ */
+export function getDaySpend(now = Date.now()): number {
   if (typeof window === "undefined") return 0;
-  return readNum(winKey(now));
+  return readNum(dayKey(now));
 }
 /** 本周已花 ¥ */
 export function getWeekSpend(now = Date.now()): number {
   if (typeof window === "undefined") return 0;
   return readNum(weekKey(now));
 }
-/** 当前窗口剩余 ¥ */
-export function getWindowRemaining(now = Date.now()): number {
-  return Math.max(0, WINDOW_BUDGET - getWindowSpend(now));
+/** 今日剩余 ¥ */
+export function getDayRemaining(now = Date.now()): number {
+  return Math.max(0, DAILY_BUDGET - getDaySpend(now));
 }
 /** 本周剩余 ¥ */
 export function getWeekRemaining(now = Date.now()): number {
@@ -117,17 +117,18 @@ export function getWeekRemaining(now = Date.now()): number {
 
 /** 发送前预检：当前窗口与本周都还有免费额度（任一耗尽即拦，下条才拦）*/
 export function canSpend(): boolean {
-  return getWindowRemaining() > 0 && getWeekRemaining() > 0;
+  return getDayRemaining() > 0 && getWeekRemaining() > 0;
 }
 
 /** 清掉非当前的旧 usage 键（窗口/周各保留当前），避免 localStorage 无限增长 */
-function cleanupOld(curWin: string, curWeek: string) {
+function cleanupOld(curDay: string, curWeek: string) {
   try {
     const toRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k) continue;
-      if (k.startsWith(WIN_PREFIX) && k !== curWin) toRemove.push(k);
+      if (k.startsWith(DAY_PREFIX) && k !== curDay) toRemove.push(k);
+      else if (k.startsWith(LEGACY_WIN_PREFIX)) toRemove.push(k);
       else if (k.startsWith(WEEK_PREFIX) && k !== curWeek) toRemove.push(k);
     }
     toRemove.forEach((k) => localStorage.removeItem(k));
@@ -147,11 +148,11 @@ export function recordUsage(
   const cost = costOf(model, promptTokens, completionTokens, cache);
   if (cost <= 0) return 0;
   try {
-    const wk = winKey();
+    const dk = dayKey();
     const wkw = weekKey();
-    localStorage.setItem(wk, String(getWindowSpend() + cost));
+    localStorage.setItem(dk, String(getDaySpend() + cost));
     localStorage.setItem(wkw, String(getWeekSpend() + cost));
-    cleanupOld(wk, wkw);
+    cleanupOld(dk, wkw);
     window.dispatchEvent(new CustomEvent(USAGE_EVENT));
   } catch {
     /* silent */
@@ -176,8 +177,8 @@ export interface UsageBucket {
 }
 
 export interface UsageSnapshot {
-  /** 当前 5h 窗口 */
-  window: UsageBucket;
+  /** 当前自然日 */
+  day: UsageBucket;
   /** 本周 */
   week: UsageBucket;
 }
@@ -195,13 +196,13 @@ function bucket(spend: number, budget: number, resetAt: number): UsageBucket {
 
 export function readUsage(now = Date.now()): UsageSnapshot {
   return {
-    window: bucket(getWindowSpend(now), WINDOW_BUDGET, getNextResetAt(now)),
+    day: bucket(getDaySpend(now), DAILY_BUDGET, getDayResetAt(now)),
     week: bucket(getWeekSpend(now), WEEKLY_BUDGET, getWeekResetAt(now)),
   };
 }
 
 const EMPTY_SNAPSHOT: UsageSnapshot = {
-  window: bucket(0, WINDOW_BUDGET, 0),
+  day: bucket(0, DAILY_BUDGET, 0),
   week: bucket(0, WEEKLY_BUDGET, 0),
 };
 

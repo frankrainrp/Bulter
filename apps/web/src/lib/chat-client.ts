@@ -207,6 +207,15 @@ async function streamOneRound(opts: {
       const j = await res.json();
       detail = j.error || detail;
     } catch { /* ignore */ }
+    if (res.status === 429) {
+      const retryAfter = Number(res.headers.get("Retry-After") || 0);
+      const source = res.headers.get("X-Error-Source");
+      const policy = source === "deepseek"
+        ? "deepseek-provider"
+        : (res.headers.get("X-RateLimit-Policy") || "unknown");
+      const wait = retryAfter > 0 ? ` Retry in about ${retryAfter} seconds.` : "";
+      detail = `${detail} [limit: ${policy}].${wait}`;
+    }
     const err = new Error(detail);
     opts.callbacks.onError?.(err);
     throw err;
@@ -224,6 +233,7 @@ async function streamOneRound(opts: {
   // 已被服务端 [chat/route] 抑制，这里是双保险），不再触发 onError 误显
   // "出错了" 气泡，仅 console.warn。
   let hasReceivedDelta = false;
+  let streamError: Error | null = null;
   const toolCallsAcc: Map<number, ApiToolCall> = new Map();
 
   while (true) {
@@ -263,12 +273,12 @@ async function streamOneRound(opts: {
           // eslint-disable-next-line no-console
           console.warn("[chat-client] tail error after data (suppressed):", chunk.error);
         } else {
-          opts.callbacks.onError?.(new Error(chunk.error));
+          streamError = new Error(chunk.error);
         }
         continue;
       }
 
-      // [087] 真实成本计量：流尾 usage chunk → 按所选模型单价折 ¥ 记入当前 5h 窗口
+      // 真实成本计量：流尾 usage chunk → 按所选模型单价折 ¥ 记入今日额度
       if (chunk.usage) {
         const model: AiModelId =
           opts.model && isValidModelId(opts.model) ? opts.model : DEFAULT_MODEL_ID;
@@ -314,6 +324,11 @@ async function streamOneRound(opts: {
         }
       }
     }
+  }
+
+  if (streamError) {
+    opts.callbacks.onError?.(streamError);
+    throw streamError;
   }
 
   const tool_calls = Array.from(toolCallsAcc.values());

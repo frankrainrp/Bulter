@@ -31,14 +31,13 @@ Never commit real `.env` or `.env.local` files.
 
 ## 1. AI Agent Processing Specialist
 
-Scope: assistant chat, tool calls, note/task agent actions, OCR, DDL extraction, AI flow safety, AI logs.
+Scope: assistant chat, tool calls, note/task agent actions, DDL extraction, AI flow safety, AI logs.
 
 Backend ownership:
 
 - `apps/api/src/routes/AgentRoutes.ts`
 - `apps/api/src/routes/ChatRoutes.ts`
 - `apps/api/src/routes/ExtractDdlRoutes.ts`
-- `apps/api/src/routes/OcrRoutes.ts`
 - `apps/api/src/services/AgentService.ts`
 - `apps/api/src/services/AgentLogService.ts`
 - `apps/api/src/services/AiService.ts`
@@ -170,7 +169,8 @@ Page boundary:
 
 - `apps/web/src/app/page.tsx` owns page composition only: global state wiring, refs, panel placement, and handoff between hooks/components.
 - Core hydrate/persist state belongs in `apps/web/src/hooks/useCoreAppData.ts`.
-- Chat send, retry, stop, streaming UI message creation, quota checks, and chat tool-call status toasts belong in `apps/web/src/hooks/useChatFlow.ts`.
+- Chat send, retry, stop, streaming UI message creation, quota checks, clean per-session model history, and chat tool-call status toasts belong in `apps/web/src/hooks/useChatFlow.ts` and `apps/web/src/lib/chat-history.ts`.
+- Chat history persistence is debounced and serialized in `apps/web/src/hooks/useCoreAppData.ts`; history GET/PUT routes must never share the model-completion limiter.
 - Chat session lifecycle and visible message derivation belong in `apps/web/src/hooks/useChatSessions.ts`.
 - AI pending review logic belongs in `apps/web/src/hooks/usePendingBatches.ts`.
 - File/PDF extraction pipeline logic belongs in `apps/web/src/hooks/useFilePipeline.ts`.

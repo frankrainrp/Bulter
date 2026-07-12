@@ -170,22 +170,19 @@ export const ChatTools = [
       },
     },
   },
-  // create_custom_panel：创建自定义面板/仪表盘草稿。
-  // kind=modules 时 modules 可承载统计卡、倒计时、图表、任务列表等动态组件配置。
+  // create_custom_panel：嵌入 HTTPS 网站，或运行自包含 HTML 小程序。
   {
     type: "function",
     function: {
       name: "create_custom_panel",
-      description: "Create a custom dashboard or panel draft.",
+      description: "Create an interactive Web Panel. Use url for a real HTTPS site, or complete self-contained html with inline CSS/JS for a mini app or game. Provide exactly one. Never claim success without the full working HTML.",
       parameters: {
         type: "object",
         properties: {
           label: { type: "string" },
           emoji: { type: "string" },
-          kind: { type: "string", enum: ["markdown", "iframe", "modules"] },
-          content: { type: "string" },
-          url: { type: "string" },
-          modules: { type: "array", items: { type: "object" } },
+          url: { type: "string", description: "Complete HTTPS URL to embed." },
+          html: { type: "string", description: "Complete self-contained HTML with inline CSS and JavaScript; no external dependencies." },
         },
         required: ["label"],
       },

@@ -14,7 +14,7 @@ import { playSound } from "@/lib/sound";
 import type { CustomPanel, NavId } from "@/lib/types";
 
 type CustomPanelPatch = Partial<
-  Pick<CustomPanel, "label" | "emoji" | "content" | "kind" | "url" | "modules" | "spec">
+  Pick<CustomPanel, "label" | "emoji" | "content" | "kind" | "url" | "html" | "modules">
 >;
 
 interface UseCustomPanelsArgs {

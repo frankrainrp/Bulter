@@ -155,7 +155,7 @@ export interface Wallpaper {
 // 用户自定义面板（[052] Phase E；[054] D.2 加 kind/url 支持 iframe）
 // 出现在 Tab Bar 内置 4 Tab 后
 // [064] 模组系统：kind=modules → 面板由一摞 PanelModule 组合（AI 可调用拼装 / 用户手动加）
-export type CustomPanelKind = "markdown" | "iframe" | "modules" | "generated";
+export type CustomPanelKind = "markdown" | "iframe" | "modules";
 export interface CustomPanel {
   id: string;          // "custom-{nanoid}"
   label: string;       // Tab 显示名（≤12 字符）
@@ -167,10 +167,10 @@ export interface CustomPanel {
   kind?: CustomPanelKind;
   /** [054] D.2：嵌入网页 URL（kind=iframe 时用）*/
   url?: string;
+  /** AI 生成的自包含网页源码（kind=iframe 时通过 sandboxed srcDoc 运行）*/
+  html?: string;
   /** [064] kind=modules 时的模组列表（按顺序竖排渲染）*/
   modules?: PanelModule[];
-  /** [073] kind=generated 时的声明式面板 schema（数据源 + 组件块）*/
-  spec?: import("./panel-schema").GeneratedPanelSpec;
 }
 
 // ============================================================

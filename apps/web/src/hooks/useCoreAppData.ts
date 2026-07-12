@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import {
   GetChatHistoryByApi,
   GetNoteListByApi,
@@ -76,6 +76,7 @@ export function useCoreAppData(): CoreAppData {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const chatSyncQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     let cancelled = false;
@@ -142,16 +143,22 @@ export function useCoreAppData(): CoreAppData {
 
   useEffect(() => {
     if (!hydrated) return;
-    void (async () => {
-      try {
-        await ReplaceChatHistoryByApi({
-          sessions,
-          messages: toPersistableMessages(messages),
+    // Streaming updates can arrive token-by-token. Debounce the destructive
+    // snapshot replacement so one answer produces one history write, not
+    // hundreds of overlapping PUT /chat/history requests.
+    const timer = window.setTimeout(() => {
+      const snapshot = { sessions, messages: toPersistableMessages(messages) };
+      chatSyncQueueRef.current = chatSyncQueueRef.current
+        .catch(() => undefined)
+        .then(async () => {
+          try {
+            await ReplaceChatHistoryByApi(snapshot);
+          } catch (e) {
+            console.warn("[api] chat history sync failed:", e);
+          }
         });
-      } catch (e) {
-        console.warn("[api] chat history sync failed:", e);
-      }
-    })();
+    }, 600);
+    return () => window.clearTimeout(timer);
   }, [sessions, messages, hydrated]);
 
   return {

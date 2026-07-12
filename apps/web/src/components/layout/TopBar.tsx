@@ -108,11 +108,11 @@ export default function TopBar({
           role="img"
           className="app-logo"
           style={{
-            width: 28,
-            height: 28,
-            borderRadius: 6,
+            width: 46.2,
+            height: 46.2,
+            borderRadius: 9.9,
             backgroundImage: "url('/assets/logo.png')",
-            backgroundSize: "28px 28px",
+            backgroundSize: "46.2px 46.2px",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
           }}

@@ -26,11 +26,8 @@ Both runtime files are ignored by git.
 - `DEEPSEEK_API_KEY` is required for chat and AI generation.
 - `DEEPSEEK_BASE_URL` overrides the DeepSeek endpoint when needed.
 - `DEEPSEEK_MODEL` controls the default AI model.
-- `MISTRAL_API_KEY` is required for OCR.
-- `MISTRAL_BASE_URL` overrides the Mistral endpoint when needed.
-- `OCR_PROVIDER` currently supports `mistral`.
+- Searchable PDFs and plain-text documents are extracted locally in the browser; no OCR provider key is required.
 
 ## Web Variables
 
 - `BUTLER_API_URL` tells the Next frontend where to proxy `/express-api/*`.
-

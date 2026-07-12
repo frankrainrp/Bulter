@@ -92,6 +92,7 @@ interface ChatCanvasProps {
   showDailyBrief?: boolean;
   onStartFocus?: () => void;
   onDismissBrief?: () => void;
+  userEmail?: string;
 }
 
 // ============================================================
@@ -529,6 +530,7 @@ export default function ChatCanvas(props: ChatCanvasProps) {
     showDailyBrief = false,
     onStartFocus,
     onDismissBrief,
+    userEmail = "student@example.com",
   } = props;
 
   const { t } = useT();
@@ -562,19 +564,6 @@ export default function ChatCanvas(props: ChatCanvasProps) {
 
   const isEmpty = messages.length === 0;
   const isMobile = useIsMobile();
-  const dockedConfirmMessage = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
-      if (msg.role === "confirm" && msg.confirmBatchId && pendingBatches[msg.confirmBatchId]) {
-        return msg;
-      }
-    }
-    return null;
-  }, [messages, pendingBatches]);
-  const dockedConfirmBatch = dockedConfirmMessage?.confirmBatchId
-    ? pendingBatches[dockedConfirmMessage.confirmBatchId]
-    : null;
-
   return (
     <main
       className="ap-chat"
@@ -619,7 +608,7 @@ export default function ChatCanvas(props: ChatCanvasProps) {
           >
             <div style={{ textAlign: "center" }}>
               <h2 className="font-display" style={{ fontSize: 27, fontWeight: 700, color: "var(--color-text)", margin: 0, letterSpacing: "-0.4px" }}>
-                {t("chat.greetingLine", { time: t(greetingTimeKey()) })}
+                {t("chat.greetingLine", { time: t(greetingTimeKey()), user: userEmail })}
               </h2>
               <p style={{ fontSize: 14, color: "var(--color-text-muted)", margin: "8px 0 0", lineHeight: 1.5 }}>
                 {t("chat.subtitle")}
@@ -675,8 +664,8 @@ export default function ChatCanvas(props: ChatCanvasProps) {
               if (msg.role === "confirm" && msg.confirmBatchId) {
                 const batch = pendingBatches[msg.confirmBatchId];
                 if (!batch) return null;
-                if (msg.id === dockedConfirmMessage?.id) return null;
-                // Older confirmation cards stay in the conversation history.
+                // Confirmation groups are regular conversation messages. This
+                // keeps every group independently reachable in the chat scroll.
                 return (
                   <div
                     key={msg.id}
@@ -730,26 +719,6 @@ export default function ChatCanvas(props: ChatCanvasProps) {
             zIndex: 2,
           }}
         >
-          {dockedConfirmBatch && (
-            <div
-              className="comic-bubble"
-              style={{
-                width: "100%",
-                maxWidth: CONTENT_MAX,
-                display: "flex",
-                justifyContent: "center",
-                marginBottom: 8,
-                flexShrink: 0,
-              }}
-            >
-              <ConfirmCard
-                batch={dockedConfirmBatch}
-                onAccept={onAcceptBatch}
-                onReject={onRejectBatch}
-                onDropChange={onDropChange}
-              />
-            </div>
-          )}
           <div style={{ width: "100%", maxWidth: CONTENT_MAX, display: "flex", justifyContent: "center" }}>
             <InputPod
               value={inputValue}

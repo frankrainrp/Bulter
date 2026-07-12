@@ -2,6 +2,7 @@ node_modules/
 dist/
 .next/
 .turbo/
+*.tsbuildinfo
 .env
 .env.local
 apps/web/data/

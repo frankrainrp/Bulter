@@ -11,7 +11,8 @@ import {
 import { getStoredPersonality } from "@/components/PreferencesPanel";
 import { useToast } from "@/components/Toast";
 import type { AiModelId } from "@/lib/ai-models";
-import { streamChat, type ApiMessage, type StreamOptions } from "@/lib/chat-client";
+import { streamChat, type StreamOptions } from "@/lib/chat-client";
+import { buildChatHistory } from "@/lib/chat-history";
 import {
   canAfford,
   creditCostOf,
@@ -23,7 +24,6 @@ import type { ChatMessage, ChatSession, DdlItem, UploadedFile } from "@/lib/type
 import { canSpend } from "@/lib/usage";
 
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
-const HISTORY_LIMIT = 10;
 
 // Chat send orchestration lives here so page.tsx only wires state and UI.
 // This hook owns quota/credit gates, attachment pipeline handoff, streaming
@@ -39,6 +39,7 @@ interface UseChatFlowArgs {
   runRealPipeline: (file: UploadedFile) => Promise<void>;
   executeToolCall: StreamOptions["executeToolCall"];
   selectedModel: AiModelId;
+  userName: string;
   openQuotaWall: () => void;
   openCreditsWall: (need: number) => void;
   resetCurrentBatch: () => void;
@@ -72,6 +73,7 @@ export function useChatFlow({
   runRealPipeline,
   executeToolCall,
   selectedModel,
+  userName,
   openQuotaWall,
   openCreditsWall,
   resetCurrentBatch,
@@ -80,6 +82,8 @@ export function useChatFlow({
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const sendLockRef = useRef(false);
+  const retryRequestRef = useRef<{ content: string; baseMessages: ChatMessage[] } | null>(null);
 
   // Keep chat titles lightweight: the first non-empty user prompt or file name
   // becomes the session title, while later sends only refresh updatedAt.
@@ -99,9 +103,10 @@ export function useChatFlow({
   }, [activeSessionIdRef, setSessions]);
 
   const handleSend = useCallback(async () => {
-    const content = inputValue.trim();
+    const retryRequest = retryRequestRef.current;
+    const content = (retryRequest?.content ?? inputValue).trim();
     if (!content && attachedFiles.length === 0) return;
-    if (isLoading) return;
+    if (isLoading || sendLockRef.current) return;
 
     const sid = activeSessionIdRef.current;
     if (!sid) return;
@@ -117,9 +122,12 @@ export function useChatFlow({
       return;
     }
 
+    sendLockRef.current = true;
+    retryRequestRef.current = null;
+
     // Snapshot attachments before clearing input state; the async pipeline must
     // keep the exact File objects the user submitted in this send action.
-    const filesSnapshot = attachedFiles;
+    const filesSnapshot = retryRequest ? [] : attachedFiles;
     const userUiMsg: ChatMessage = {
       id: uid(),
       sessionId: sid,
@@ -141,6 +149,7 @@ export function useChatFlow({
       filesSnapshot.forEach((file) => {
         void runRealPipeline(file);
       });
+      sendLockRef.current = false;
       return;
     }
 
@@ -150,22 +159,8 @@ export function useChatFlow({
 
     // Send only compact user/assistant turns to the model. Tool/pipeline/confirm
     // UI messages are local workflow artifacts, not model conversation history.
-    const allHistory: ApiMessage[] = [...messages, userUiMsg]
-      .filter((message) => (
-        message.sessionId === sid
-        && (message.role === "user" || message.role === "assistant")
-        && message.content
-      ))
-      .map((message) => ({ role: message.role as "user" | "assistant", content: message.content }));
-
-    let trimmed = allHistory.slice(-HISTORY_LIMIT);
-    while (trimmed.length > 0 && trimmed[0].role !== "user") {
-      trimmed = trimmed.slice(1);
-    }
-    const historyApi = trimmed;
-    if (allHistory.length > historyApi.length) {
-      console.log(`[chat] history truncated: ${allHistory.length} -> ${historyApi.length}`);
-    }
+    const sourceMessages = retryRequest?.baseMessages ?? messages;
+    const historyApi = buildChatHistory([...sourceMessages, userUiMsg], sid);
 
     let currentAssistantId: string | null = null;
     // Streaming content and reasoning deltas may arrive before a full assistant
@@ -205,7 +200,7 @@ export function useChatFlow({
       await streamChat({
         messages: historyApi,
         contextSummary: buildContextSummary(ddlsRef.current),
-        userName: "Feng",
+        userName,
         includeTools: true,
         model: selectedModel,
         personality: getStoredPersonality(),
@@ -233,7 +228,7 @@ export function useChatFlow({
               list_notes: "Reading the note list",
               update_note: "Updating a note",
               delete_note: "Deleting a note",
-              create_custom_panel: "Drafting a custom panel",
+              create_custom_panel: "Drafting an interactive Web Panel",
               create_recurring_task: "Creating a recurring task",
             };
             const label = labels[call.function.name] ?? `Calling ${call.function.name}`;
@@ -264,6 +259,7 @@ export function useChatFlow({
       }
     } finally {
       setIsLoading(false);
+      sendLockRef.current = false;
       resetCurrentBatch();
       abortRef.current = null;
     }
@@ -280,6 +276,7 @@ export function useChatFlow({
     resetCurrentBatch,
     runRealPipeline,
     selectedModel,
+    userName,
     setAttachedFiles,
     setMessages,
     toast,
@@ -296,27 +293,27 @@ export function useChatFlow({
     const sid = activeSessionIdRef.current;
     if (!sid) return;
 
-    const idx = messages.findIndex((message) => message.id === assistantMessageId);
+    const sessionMessages = messages.filter((message) => message.sessionId === sid);
+    const idx = sessionMessages.findIndex((message) => message.id === assistantMessageId);
     if (idx < 0) return;
 
     let userIdx = -1;
     for (let i = idx - 1; i >= 0; i -= 1) {
-      if (messages[i].sessionId === sid && messages[i].role === "user") {
+      if (sessionMessages[i].role === "user") {
         userIdx = i;
         break;
       }
     }
     if (userIdx < 0) return;
 
-    const userContent = messages[userIdx].content;
-    setMessages((prev) => prev.slice(0, userIdx));
+    const userContent = sessionMessages[userIdx].content;
+    const removedIds = new Set(sessionMessages.slice(userIdx).map((message) => message.id));
+    const baseMessages = messages.filter((message) => !removedIds.has(message.id));
+    retryRequestRef.current = { content: userContent, baseMessages };
+    setMessages(baseMessages);
     setInputValue(userContent);
-
-    setTimeout(() => {
-      const btn = document.querySelector("#send-btn") as HTMLButtonElement | null;
-      btn?.click();
-    }, 50);
-  }, [activeSessionIdRef, isLoading, messages, setMessages]);
+    void handleSend();
+  }, [activeSessionIdRef, handleSend, isLoading, messages, setMessages]);
 
   return {
     inputValue,

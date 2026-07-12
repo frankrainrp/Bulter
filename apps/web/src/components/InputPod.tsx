@@ -309,11 +309,11 @@ export default function InputPod({
 }
 
 // ---- [088] 用量圆环 ----
-// 本时段（5h 窗口）免费额度消耗百分比，环形进度 + 中心 % + 悬浮明细。
+// 今日免费额度消耗百分比，环形进度 + 中心 % + 悬浮明细。
 // 耗尽转危险色、≥80% 转琥珀。点击/悬浮 title 提示余量与回满倒计时。
 function UsageRing() {
   const { t } = useT();
-  const u = useUsage().window;
+  const u = useUsage().day;
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const iv = setInterval(() => setNow(Date.now()), 30000);

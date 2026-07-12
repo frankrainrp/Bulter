@@ -8,13 +8,14 @@ import {
   type SetStateAction,
 } from "react";
 import type { TFunc } from "@/lib/i18n";
+import { filterDdlRelevant, parseDocument } from "@/lib/document-parser";
 import { INITIAL_STEPS } from "@/lib/mock-pipeline";
 import { makeBatch, makeChangeId, type PendingBatch, type PendingChange } from "@/lib/pending";
 import type { ChatMessage, DdlItem, ProcessingPipeline, UploadedFile } from "@/lib/types";
 
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 
-// Runs the attachment-to-review flow: parse/OCR the document, filter it for
+// Runs the attachment-to-review flow: extract local document text, filter it for
 // deadline-relevant text, ask the backend extractor for structured tasks, then
 // stage the results in the same confirmation queue used by AI tool calls.
 interface UseFilePipelineArgs {
@@ -105,21 +106,14 @@ export function useFilePipeline({
         setStep(0, "running", t("pg.bigFile", { mb: (uploaded.file.size / 1024 / 1024).toFixed(1) }));
       }
 
-      // Load heavier parsing code only when a file is actually submitted.
-      const { parseDocument, filterDdlRelevant } = await import("@/lib/document-parser");
       const parsed = await parseDocument(uploaded.file);
       if (parsed.ok !== true) {
-        const hint = parsed.needsConfig ? t("pg.ocrHint") : "";
-        setStep(0, "failed", parsed.error + hint);
+        setStep(0, "failed", parsed.error);
         finishPipeline("failed");
         return;
       }
 
-      const sourceLabel = parsed.source === "unpdf"
-        ? t("pg.localParse")
-        : parsed.source.startsWith("ocr-")
-          ? `OCR (${parsed.source.replace("ocr-", "")})`
-          : parsed.source;
+      const sourceLabel = parsed.source === "unpdf" ? t("pg.localParse") : "Local text";
 
       const keywordFiltered = filterDdlRelevant(parsed.text);
       let finalMd = keywordFiltered;
