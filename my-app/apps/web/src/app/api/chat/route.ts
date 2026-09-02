@@ -9,6 +9,27 @@ import { isValidModelId, getModelMeta, DEFAULT_MODEL_ID, type AiModelId } from "
 export const runtime = "nodejs";       // openai SDK 需要 node runtime（含 stream API）
 export const dynamic = "force-dynamic"; // 强制动态，禁用静态生成
 
+interface ModelEndpoint {
+  name: "server" | "windows";
+  baseURL: string;
+}
+
+function endpointCandidates(modelId: AiModelId): ModelEndpoint[] {
+  const server: ModelEndpoint = {
+    name: "server",
+    baseURL: process.env.OLLAMA_SERVER_BASE_URL || process.env.DEEPSEEK_BASE_URL || "http://ollama:11434/v1",
+  };
+  const windowsUrl = process.env.OLLAMA_WINDOWS_BASE_URL?.trim();
+  const windows: ModelEndpoint | null = windowsUrl
+    ? { name: "windows", baseURL: windowsUrl }
+    : null;
+
+  if (!windows) return [server];
+  return modelId === "deepseek-v4-thinking"
+    ? [windows, server]
+    : [server, windows];
+}
+
 interface ChatRequest {
   messages: Array<{
     role: "system" | "user" | "assistant" | "tool";
@@ -92,11 +113,6 @@ export async function POST(req: Request) {
     });
   }
 
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1",
-  });
-
   const systemPrompt = buildSystemPrompt(
     body.userName || "Feng",
     body.contextSummary || "",
@@ -126,9 +142,10 @@ export async function POST(req: Request) {
     : {};
 
   try {
+    type ChatCreateParams = Parameters<OpenAI["chat"]["completions"]["create"]>[0];
     const createParams = {
       model: modelMeta.apiModel,
-      messages: messages as Parameters<typeof openai.chat.completions.create>[0]["messages"],
+      messages: messages as ChatCreateParams["messages"],
       tools: useTools ? TOOLS : undefined,
       tool_choice: useTools ? "auto" : undefined,
       stream: true,
@@ -139,20 +156,43 @@ export async function POST(req: Request) {
       max_tokens: 2048,
       ...thinkingExtras,
     };
-    const stream = await openai.chat.completions.create(
-      createParams as Parameters<typeof openai.chat.completions.create>[0],
-    );
+    let stream: AsyncIterable<unknown> | null = null;
+    let activeEndpoint: ModelEndpoint | null = null;
+    const endpointErrors: string[] = [];
+    for (const endpoint of endpointCandidates(requestedModel)) {
+      try {
+        const openai = new OpenAI({
+          apiKey,
+          baseURL: endpoint.baseURL,
+          timeout: 60_000,
+          maxRetries: 0,
+        });
+        stream = await openai.chat.completions.create(
+          createParams as Parameters<typeof openai.chat.completions.create>[0],
+        ) as AsyncIterable<unknown>;
+        activeEndpoint = endpoint;
+        break;
+      } catch (err) {
+        endpointErrors.push(`${endpoint.name}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    if (!stream || !activeEndpoint) {
+      throw new Error(endpointErrors.join(" | ") || "没有可用的本地模型端点");
+    }
+    const activeStream = stream;
+    const activeRoute = activeEndpoint.name;
 
     const encoder = new TextEncoder();
     const sseStream = new ReadableStream({
       async start(controller) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ butler_route: activeRoute })}\n\n`));
         // 跟踪是否已发出过任何数据 chunk。若已发出（流已正常产出内容），
         // 末尾若 OpenAI SDK 迭代器抛错（DeepSeek thinking 模式的尾部 usage
         // chunk 或后端连接收尾不规整会触发）只 console.warn，不再发 error
         // chunk 误导客户端 — 内容已完整流给用户。
         let hasEmittedChunk = false;
         try {
-          for await (const chunk of stream as AsyncIterable<unknown>) {
+          for await (const chunk of activeStream) {
             const data = JSON.stringify(chunk);
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
             hasEmittedChunk = true;
@@ -184,7 +224,7 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: `DeepSeek 调用失败：${msg}` }), {
+    return new Response(JSON.stringify({ error: `本地模型调用失败：${msg}` }), {
       status: 500, headers: { "Content-Type": "application/json" },
     });
   }

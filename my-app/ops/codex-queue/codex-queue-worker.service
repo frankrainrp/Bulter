@@ -1,0 +1,14 @@
+[Unit]
+Description=Run one due Butler Codex task
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=frankrain
+Group=frankrain
+Environment=HOME=/home/frankrain
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=/home/frankrain/server/automation-workspaces/Bulter
+ExecStart=/usr/bin/python3 /home/frankrain/server/apps/codex-queue/codex_queue.py --db /home/frankrain/server/data/codex-queue/queue.sqlite run-due
+TimeoutStartSec=4h30min

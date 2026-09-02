@@ -1,0 +1,5 @@
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile /home/frankrain/.ssh/butler_github_ed25519
+    IdentitiesOnly yes

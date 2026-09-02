@@ -40,3 +40,8 @@ Thumbs.db
 
 # TypeScript 增量编译
 *.tsbuildinfo
+
+# Local Python/SQLite smoke-test artifacts
+__pycache__/
+*.py[cod]
+.tmp-queue.sqlite*

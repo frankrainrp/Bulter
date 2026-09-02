@@ -68,6 +68,7 @@ import {
   putCustomPanel,
   updateCustomPanel,
 } from "@/lib/custom-panels";
+import { loadServerState, saveServerState } from "@/lib/server-state";
 import { playSound } from "@/lib/sound";
 import RecurringTasksManager from "@/components/RecurringTasksManager";
 import {
@@ -164,7 +165,7 @@ export default function HomePage() {
   const activeSessionIdRef = useRef<string | null>(null);
   useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
 
-  // ---------- 持久化：启动 load + 改动同步到 IndexedDB（Dexie） ----------
+  // ---------- 持久化：服务器 SQLite 为主，浏览器 IndexedDB 为本机缓存 ----------
   const [hydrated, setHydrated] = useState(false);
 
   // 启动一次性 load
@@ -172,14 +173,27 @@ export default function HomePage() {
     let cancelled = false;
     (async () => {
       try {
-        const { getDb } = await import("@/lib/db");
-        const db = getDb();
-        const [ddlRows, sessRows, msgRows, noteRows] = await Promise.all([
-          db.ddls.toArray(),
-          db.sessions.toArray(),
-          db.messages.toArray(),
-          db.notes.toArray(),
-        ]);
+        let ddlRows: DdlItem[];
+        let sessRows: ChatSession[];
+        let msgRows: ChatMessage[];
+        let noteRows: Note[];
+        try {
+          const remote = await loadServerState();
+          ddlRows = remote.ddls as DdlItem[];
+          sessRows = remote.sessions as ChatSession[];
+          msgRows = remote.messages as ChatMessage[];
+          noteRows = remote.notes as Note[];
+        } catch (remoteError) {
+          console.warn("[sqlite] unavailable, falling back to browser cache:", remoteError);
+          const { getDb } = await import("@/lib/db");
+          const db = getDb();
+          [ddlRows, sessRows, msgRows, noteRows] = await Promise.all([
+            db.ddls.toArray(),
+            db.sessions.toArray(),
+            db.messages.toArray(),
+            db.notes.toArray(),
+          ]);
+        }
         if (cancelled) return;
         if (ddlRows.length > 0) setDdls(ddlRows);
         if (noteRows.length > 0) setNotes(noteRows);
@@ -219,11 +233,12 @@ export default function HomePage() {
     return () => { cancelled = true; };
   }, []);
 
-  // 改动同步：每次 ddls 变化，整体替换 IndexedDB 表
+  // 改动同步：SQLite + IndexedDB 缓存
   useEffect(() => {
     if (!hydrated) return; // 防止首次渲染（空数组）覆盖已有数据
     (async () => {
       try {
+        await saveServerState("ddls", ddls);
         const { getDb } = await import("@/lib/db");
         const db = getDb();
         await db.transaction("rw", db.ddls, async () => {
@@ -241,6 +256,7 @@ export default function HomePage() {
     if (!hydrated) return;
     (async () => {
       try {
+        await saveServerState("sessions", sessions);
         const { getDb } = await import("@/lib/db");
         const db = getDb();
         await db.transaction("rw", db.sessions, async () => {
@@ -258,6 +274,7 @@ export default function HomePage() {
     if (!hydrated) return;
     (async () => {
       try {
+        await saveServerState("notes", notes);
         const { getDb } = await import("@/lib/db");
         const db = getDb();
         await db.transaction("rw", db.notes, async () => {
@@ -315,6 +332,7 @@ export default function HomePage() {
         const { getDb } = await import("@/lib/db");
         const db = getDb();
         const persistable = messages.filter((m) => m.role !== "pipeline" && m.role !== "confirm");
+        await saveServerState("messages", persistable);
         await db.transaction("rw", db.messages, async () => {
           await db.messages.clear();
           if (persistable.length > 0) await db.messages.bulkPut(persistable);

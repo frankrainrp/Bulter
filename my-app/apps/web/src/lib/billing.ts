@@ -202,7 +202,7 @@ export function addInvoice(inv: Invoice) {
 }
 
 // ---------- 模型门槛 ----------
-const FREE_MODELS: AiModelId[] = ["deepseek-v4-flash"];
+const FREE_MODELS: AiModelId[] = ["deepseek-v4-flash", "deepseek-v4-thinking"];
 
 /** Free 仅 Flash；Pro/Max 解锁全部模型 */
 export function isModelAllowed(modelId: AiModelId, plan: PlanId): boolean {

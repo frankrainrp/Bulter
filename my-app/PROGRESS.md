@@ -7,6 +7,7 @@
 
 | # | 标题 | 主要产出 |
 |---|---|---|
+| [089] | 家庭部署双 Ollama 路由 | 模型下拉只保留 Ubuntu 服务器与 Windows RTX 5090 两个真实入口；所选端点失败时自动回退另一台；两条本地路由不再消耗模拟付费额度；核心数据继续统一写服务器 SQLite。 |
 | [088] | 用量圆环移到发送钮旁 + 提示词卡默认折叠 | ① 顶栏额度条(UsageMeter)撤掉 → InputPod 发送钮左侧加 `UsageRing`（30px SVG 环形进度 + 中心 `%` + 悬浮明细 title，本时段消耗百分比；≥80% 转琥珀、耗尽转危险色，30s tick 倒计时）；TopBar 清掉 UsageMeter/useEffect/useUsage/formatCountdown 导入。② ChatCanvas 提示词卡 3 张（进度追踪/面板创建/AI工作流）改 `PromptGroupCard`：**默认只显标题 + ▼，点开才展开具体提示词**（各自独立 toggle、aria-expanded、grid alignItems:start 防展开撑高同行）。真机验证：圆环 0%→67% 随用量填充、tooltip 准确；点「进度追踪」展开 3 条且其它卡保持收起。tsc EXIT=0 |
 | [087] | 变现 P1+P2：5h 窗口真实成本计量 + 免费额度 softwall | `lib/usage.ts`（COST_PER_K 各模型 ¥/千token + 5h 滑动窗口按 windowStart 存 localStorage、翻篇清零 + recordUsage/canSpend/getWindowRemaining/useUsage hook/formatCountdown）；chat 路由开 `stream_options.include_usage` → 流尾 usage chunk；chat-client 解析 usage chunk → 按 selectedModel 单价 recordUsage 记入当前窗口；TopBar UsageMeter（本窗已花>0 才显，进度条+`¥x/¥0.6`/耗尽转危险色+`Xh Ym 后回满`倒计时）；QuotaWallModal（耗尽 softwall：切回Flash[已在Flash则隐]/充值/开会员三出口+回满倒计时）+ page handleSend 发送前 canSpend 预检拦截。真机预览验证：种 ¥0.4→额度条显`¥0.40/¥0.60`；¥0.7→转危险`后回满`；触发发送→softwall 弹出且 Flash 态正确隐藏切回项。tsc EXIT=0 |
 | [086] | 顶栏升级 CTA 收进个人资料 + 变现方案文档 v1.1 | 删 TopBar 顶栏「升级到 Pro」渐变胶囊 + 付费档徽标（升级入口/档位状态改为只在用户菜单=个人资料里出现）；getPlanDef/Crown 仍被菜单引用无废 import；tsc EXIT=0。产出 `Doc/变现方案.md`（v1.1）：Flash 免费层获客 + 高端模型付费墙；**5h 滑动窗口分批发额度**(每窗~¥0.6 不累积+回满倒计时)；真实成本计量(lib/usage.ts+chat 回传 usage)；**按量×1.3 / 会员让利25%**；**高端三家充钱→后台开通→平台统一 key 余额计费 session**(用户不碰真实 key)；多供应商网关(lib/providers/*+scripts/sync-models 定价自动同步)；增长/风险/P0-P6 路线图。仅剩待拍板：先接哪家 key、是否 P1+P2 起步 |
@@ -73,6 +74,16 @@
 | [001]-[021] | Phase 1 完成 + Phase 2 早期 | 见 [docs/progress/2026-05.md](docs/progress/2026-05.md) |
 
 > **接班 AI 提示**: 只看「最新一条」推算下一步即可。最近 30 条 [056]-[085] 是近期进度，其余条目（[022]-[055]）仍在本文件，[022]-[026] + [001]-[021] 已归档到 docs/progress/。
+
+---
+
+## [089] 2026-09-02 — 家庭部署双 Ollama 路由
+
+- 模型选择页移除 Claude / GPT / Gemini 未接入占位，只显示两个可用入口：Ubuntu 服务器千问 30B 与 Windows RTX 5090 千问 30B。
+- `/api/chat` 按选择连接对应 Ollama；首选机器不可达时自动回退另一台，避免 Windows 关机导致 Butler 不可用。
+- Windows 路由经 Tailscale 地址接入，Ubuntu 路由保持 Docker 内网；两者使用同一个 `huihui_ai/qwen3-abliterated:30b` 模型。
+- 两条本地模型成本设为 0，不触发面向云 API 的模拟额度墙。
+- 任务、会话、消息与笔记仍由服务器 `/data/butler.sqlite` 统一持久化。
 
 ---
 

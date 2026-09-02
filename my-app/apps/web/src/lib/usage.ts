@@ -19,8 +19,9 @@ import type { AiModelId } from "./ai-models";
  * P4 `scripts/sync-models.ts` 会用各家官方定价覆盖此表。
  */
 export const COST_PER_K: Record<AiModelId, { in: number; out: number }> = {
-  "deepseek-v4-flash":    { in: 0.001,  out: 0.002 },
-  "deepseek-v4-thinking": { in: 0.002,  out: 0.003 },
+  // 两条 Ollama 路由都在用户自己的设备上，不计外部 API 成本。
+  "deepseek-v4-flash":    { in: 0,      out: 0 },
+  "deepseek-v4-thinking": { in: 0,      out: 0 },
   gemini:                 { in: 0.009,  out: 0.072 },
   gpt:                    { in: 0.018,  out: 0.072 },
   claude:                 { in: 0.0216, out: 0.108 },

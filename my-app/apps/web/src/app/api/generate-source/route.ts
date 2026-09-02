@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   if (!prompt) return Response.json({ ok: false, error: "缺少 prompt" }, { status: 400 });
   if (!process.env.DEEPSEEK_API_KEY) return Response.json({ ok: false, error: "未配置 DEEPSEEK_API_KEY" }, { status: 500 });
 
-  const openai = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: "https://api.deepseek.com" });
+  const openai = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1" });
   try {
     const c = await openai.chat.completions.create({
       model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",

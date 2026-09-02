@@ -70,7 +70,7 @@ export async function POST(req: Request) {
 
   const openai = new OpenAI({
     apiKey: process.env.DEEPSEEK_API_KEY,
-    baseURL: "https://api.deepseek.com",
+    baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1",
   });
 
   try {

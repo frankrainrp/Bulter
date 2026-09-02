@@ -47,10 +47,22 @@ function isBlockedHost(hostname: string): boolean {
  *  支持内嵌，如 "Bearer env:TWITCH_TOKEN" / URL 路径里的 "botenv:TELEGRAM_BOT_TOKEN"。*/
 function resolveEnv(v: string): string {
   if (typeof v !== "string") return v;
-  return v.replace(/env:([A-Za-z_][A-Za-z0-9_]*)/g, (_m, k: string) => process.env[k] ?? "");
+  const allowed = new Set(
+    (process.env.CONNECTOR_ENV_ALLOWLIST || "")
+      .split(",")
+      .map((key) => key.trim())
+      .filter(Boolean),
+  );
+  return v.replace(/env:([A-Za-z_][A-Za-z0-9_]*)/g, (_m, k: string) => {
+    if (!allowed.has(k)) throw new Error("环境变量不在连接器允许名单中");
+    return process.env[k] ?? "";
+  });
 }
 
 export async function POST(req: Request) {
+  if (process.env.CONNECTOR_ENABLED !== "true") {
+    return Response.json({ ok: false, error: "HTTP 连接器已由管理员禁用" }, { status: 403 });
+  }
   let payload: ConnectorRequest;
   try {
     payload = (await req.json()) as ConnectorRequest;
@@ -101,7 +113,7 @@ export async function POST(req: Request) {
       headers,
       body: hasBody ? (typeof payload.body === "string" ? payload.body : JSON.stringify(payload.body)) : undefined,
       signal: controller.signal,
-      redirect: "follow",
+      redirect: "error",
     });
 
     // 体积上限保护

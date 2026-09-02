@@ -1,8 +1,8 @@
 // ============================================================
 // lib/ai-models.ts — 可切换的 AI 模型注册表
 //
-// 当前只保留 V4 系列（旧 deepseek-chat / deepseek-reasoner 2026-07-24 弃用）
-// 两个候选：V4 Flash（默认）/ V4 思考模式
+// 家庭部署只展示两个真实可用的本地推理路由：
+// Ubuntu 家庭服务器（常在线）与 Windows RTX 5090（高性能）。
 // ============================================================
 
 export type AiModelId =
@@ -32,66 +32,37 @@ export interface AiModelMeta {
   };
   /** #12 接口预留：下拉可见但暂未接入 API（点击不切换，提示敬请期待）*/
   placeholder?: boolean;
+  /** 服务端据此选择对应的 Ollama 地址。 */
+  route: "server" | "windows";
 }
 
 export const AI_MODELS: AiModelMeta[] = [
   {
     id: "deepseek-v4-flash",
-    apiModel: "deepseek-v4-flash",
-    label: "DeepSeek V4 Flash",
-    tagline: "默认 · 最低成本",
-    desc: "V4 系列轻量版，速度快、$0.0028/M 输入 token（cache hit）。日常对话 / 任务管理首选。",
+    apiModel: "huihui_ai/qwen3-abliterated:30b",
+    label: "Ubuntu 服务器 · 千问 30B",
+    tagline: "默认 · 常在线",
+    desc: "由家庭服务器 RTX 3060 上的 Ollama 运行；Windows 关机时仍可使用。",
     tier: "low",
     supportsTools: true,
+    route: "server",
   },
   {
     id: "deepseek-v4-thinking",
-    apiModel: "deepseek-v4-pro",
-    label: "DeepSeek V4 思考",
-    tagline: "深度推理 · 中等成本",
-    desc: "V4 Pro 启用思考模式（CoT 推理）。复杂分析 / 数学 / 逻辑题强，慢但准确。reasoning_effort=high。",
+    apiModel: "huihui_ai/qwen3-abliterated:30b",
+    label: "Windows RTX 5090 · 千问 30B",
+    tagline: "高速 · 电脑开机时",
+    desc: "由 Windows RTX 5090 上的 Ollama 运行；电脑离线时自动回退到 Ubuntu 服务器。",
     tier: "mid",
     supportsTools: true,
-    thinking: { reasoningEffort: "high" },
-  },
-  // #12 多模型接口预留（观察.txt）：下拉里保留 Claude / GPT / Gemini 选项，
-  // 暂未接入对应 API Key，点击不切换。接入后把 placeholder 去掉、apiModel/路由补上即可。
-  {
-    id: "claude",
-    apiModel: "claude",
-    label: "Claude",
-    tagline: "接口预留 · 敬请期待",
-    desc: "Anthropic Claude 接口已预留，待接入 API Key 后启用。",
-    tier: "high",
-    supportsTools: true,
-    placeholder: true,
-  },
-  {
-    id: "gpt",
-    apiModel: "gpt",
-    label: "GPT",
-    tagline: "接口预留 · 敬请期待",
-    desc: "OpenAI GPT 接口已预留，待接入 API Key 后启用。",
-    tier: "high",
-    supportsTools: true,
-    placeholder: true,
-  },
-  {
-    id: "gemini",
-    apiModel: "gemini",
-    label: "Gemini",
-    tagline: "接口预留 · 敬请期待",
-    desc: "Google Gemini 接口已预留，待接入 API Key 后启用。",
-    tier: "mid",
-    supportsTools: true,
-    placeholder: true,
+    route: "windows",
   },
 ];
 
 export const DEFAULT_MODEL_ID: AiModelId = "deepseek-v4-flash";
 
 export function getModelMeta(id: AiModelId): AiModelMeta {
-  return AI_MODELS.find((m) => m.id === id) ?? AI_MODELS[0];
+  return AI_MODELS.find((m) => m.id === id) ?? AI_MODELS[0]!;
 }
 
 export function isValidModelId(id: string): id is AiModelId {
