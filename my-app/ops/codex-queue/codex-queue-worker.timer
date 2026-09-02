@@ -1,5 +1,5 @@
 [Unit]
-Description=Check Butler Codex task queue every minute
+Description=Check Codex project task queue every minute
 
 [Timer]
 OnBootSec=2min

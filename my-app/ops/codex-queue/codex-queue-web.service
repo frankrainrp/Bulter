@@ -1,5 +1,5 @@
 [Unit]
-Description=Butler Codex task queue web UI
+Description=Ubuntu Codex multi-project task queue web UI
 After=network-online.target
 Wants=network-online.target
 
