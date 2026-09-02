@@ -3,9 +3,6 @@ name: Butler CI
 on:
   push:
     branches: [master]
-    paths:
-      - "my-app/**"
-      - ".github/workflows/butler-ci.yml"
   pull_request:
     branches: [master]
     paths:
