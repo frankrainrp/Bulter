@@ -18,6 +18,11 @@ from urllib.parse import urlparse
 
 DEFAULT_DB = "/home/frankrain/server/data/codex-queue/queue.sqlite"
 BUTLER_REPO = "/home/frankrain/server/automation-workspaces/Bulter"
+FAMILYOS_REPO = "/home/frankrain/server/automation-workspaces/FamilyOS"
+PROJECTS = {
+    "butler": {"name": "Butler", "repo": BUTLER_REPO},
+    "familyos": {"name": "FamilyOS", "repo": FAMILYOS_REPO},
+}
 MAX_LOG = 24000
 MAX_PROMPT = 20000
 
@@ -84,6 +89,16 @@ def connect(db_path: str) -> sqlite3.Connection:
 def row_dict(row: sqlite3.Row) -> dict:
     data = dict(row)
     data["enabled"] = bool(data["enabled"])
+    project = next(
+        (
+            {"key": key, **value}
+            for key, value in PROJECTS.items()
+            if value["repo"] == data["repo_path"]
+        ),
+        {"key": "unknown", "name": "未知项目", "repo": data["repo_path"]},
+    )
+    data["project"] = project["key"]
+    data["project_name"] = project["name"]
     return data
 
 
@@ -119,6 +134,8 @@ def git_output(repo: str, *args: str) -> tuple[int, str]:
 
 
 def prepare_repo(repo: str) -> tuple[bool, str]:
+    if repo not in {project["repo"] for project in PROJECTS.values()}:
+        return False, "任务仓库不在允许列表中。"
     if not Path(repo, ".git").exists():
         return False, "自动化仓库不存在。"
     code, dirty = git_output(repo, "status", "--porcelain")
@@ -129,12 +146,23 @@ def prepare_repo(repo: str) -> tuple[bool, str]:
     code, output = git_output(repo, "pull", "--ff-only", "origin", "master")
     if code != 0:
         return False, output
-    app_dir = str(Path(repo, "my-app"))
-    install_code, install_out, install_err = run_command(
-        ["corepack", "pnpm", "install", "--frozen-lockfile"], app_dir, timeout=30 * 60
-    )
-    install_log = tail((install_out + "\n" + install_err).strip(), 10000)
-    return install_code == 0, "\n\n".join(part for part in [output, install_log] if part)
+    install_log = ""
+    if repo == BUTLER_REPO:
+        app_dir = str(Path(repo, "my-app"))
+        install_code, install_out, install_err = run_command(
+            ["corepack", "pnpm", "install", "--frozen-lockfile"], app_dir, timeout=30 * 60
+        )
+        install_log = tail((install_out + "\n" + install_err).strip(), 10000)
+        if install_code != 0:
+            return False, "\n\n".join(part for part in [output, install_log] if part)
+    elif Path(repo, "pnpm-lock.yaml").exists():
+        install_code, install_out, install_err = run_command(
+            ["corepack", "pnpm", "install", "--frozen-lockfile"], repo, timeout=30 * 60
+        )
+        install_log = tail((install_out + "\n" + install_err).strip(), 10000)
+        if install_code != 0:
+            return False, "\n\n".join(part for part in [output, install_log] if part)
+    return True, "\n\n".join(part for part in [output, install_log] if part)
 
 
 def publish_changes(repo: str, title: str) -> tuple[bool, str]:
@@ -144,9 +172,20 @@ def publish_changes(repo: str, title: str) -> tuple[bool, str]:
     if not dirty.strip():
         return True, "没有代码改动，不需要推送。"
 
-    app_dir = str(Path(repo, "my-app"))
+    if repo == BUTLER_REPO:
+        app_dir = str(Path(repo, "my-app"))
+        verify_command = ["corepack", "pnpm", "--filter", "@smart-hub/web", "build"]
+        verify_cwd = app_dir
+    elif repo == FAMILYOS_REPO:
+        verify_script = Path(repo, "tools", "verify.sh")
+        if not verify_script.is_file():
+            return False, "FamilyOS 缺少 tools/verify.sh，未提交。"
+        verify_command = ["bash", str(verify_script)]
+        verify_cwd = repo
+    else:
+        return False, "任务仓库不在允许列表中，未提交。"
     build_code, build_out, build_err = run_command(
-        ["corepack", "pnpm", "--filter", "@smart-hub/web", "build"], app_dir, timeout=45 * 60
+        verify_command, verify_cwd, timeout=45 * 60
     )
     build_log = tail((build_out + "\n" + build_err).strip(), 10000)
     if build_code != 0:
@@ -173,7 +212,9 @@ def publish_changes(repo: str, title: str) -> tuple[bool, str]:
     push_code, push_log = git_output(repo, "push", "origin", "master")
     if push_code != 0:
         return False, "提交已创建，但推送失败，需要人工处理：\n" + push_log
-    return True, "构建通过，已提交并推送 GitHub；服务器部署器会在 CI 通过后上线。"
+    if repo == BUTLER_REPO:
+        return True, "构建通过，已提交并推送 GitHub；服务器部署器会在 CI 通过后上线。"
+    return True, "验证通过，已提交并推送 FamilyOS 私有仓库。"
 
 
 def parse_codex_events(stdout: str) -> tuple[str | None, str]:
@@ -275,6 +316,10 @@ def run_job(conn: sqlite3.Connection, job: sqlite3.Row) -> None:
             "--json",
             "--sandbox",
             "workspace-write",
+            "--config",
+            "sandbox_workspace_write.network_access=true",
+            "-C",
+            repo,
             "resume",
             session_id,
             prompt,
@@ -286,6 +331,8 @@ def run_job(conn: sqlite3.Connection, job: sqlite3.Row) -> None:
             "--json",
             "--sandbox",
             "workspace-write",
+            "--config",
+            "sandbox_workspace_write.network_access=true",
             "-C",
             repo,
             prompt,
@@ -338,14 +385,15 @@ HTML = r"""<!doctype html>
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#223326 0,#101511 45%);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:1040px;margin:auto;padding:42px 20px 80px}header{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:26px}h1{font-size:34px;letter-spacing:-.04em;margin:0}header p{color:var(--muted);max-width:600px;margin:8px 0 0}.tag{border:1px solid var(--line);border-radius:999px;padding:7px 12px;color:var(--green);white-space:nowrap}.panel{background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 20px 60px #0003}.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}label,.field{display:grid;gap:7px;color:var(--muted);font-size:13px}.wide{grid-column:1/-1}.field-label{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px}.voice-area{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}.voice-button{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;background:#273229;color:var(--text);border:1px solid var(--line);white-space:nowrap}.voice-button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.voice-button.listening{background:#4a2925;color:#ffd2cc;border-color:#8a4a42}.voice-status{color:var(--muted);font-size:12px;max-width:310px;overflow-wrap:anywhere}.voice-status.error{color:var(--red)}input,textarea,select,button{font:inherit}input,textarea,select{width:100%;background:#0e140f;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none}textarea{min-height:132px;resize:vertical}input:focus,textarea:focus,select:focus,button:focus-visible{border-color:#699773;box-shadow:0 0 0 3px #77aa8122;outline:none}button{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;background:#d9eadc;color:#102014;font-weight:650}button.secondary{background:#273229;color:var(--text);border:1px solid var(--line)}button.danger{background:#39221f;color:#ffc2bb}button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:16px}.hint{color:var(--muted);font-size:13px}.section-title{display:flex;justify-content:space-between;align-items:center;margin:30px 2px 12px}.section-title h2{margin:0;font-size:18px}.jobs{display:grid;gap:12px}.job{background:#151c16;border:1px solid var(--line);border-radius:15px;padding:17px}.job-head{display:flex;justify-content:space-between;gap:16px}.job h3{margin:0 0 5px;font-size:17px}.meta{color:var(--muted);font-size:13px}.status{border-radius:999px;padding:5px 9px;font-size:12px;white-space:nowrap;background:#253027}.status.needs_attention,.status.failed{color:var(--red);background:#36211f}.status.waiting_quota{color:var(--amber);background:#382f1d}.status.running{color:#b6d7ff;background:#1d3044}.status.scheduled{color:var(--green)}details{margin-top:12px}summary{cursor:pointer;color:var(--muted)}pre{white-space:pre-wrap;word-break:break-word;background:#0d120e;border-radius:10px;padding:12px;max-height:360px;overflow:auto;color:#cbd7cc;font:12px/1.55 ui-monospace,monospace}.empty{text-align:center;color:var(--muted);padding:38px}.notice{display:none;margin-top:12px;color:var(--green)}@media(max-width:700px){header{align-items:start;flex-direction:column}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.field-label{align-items:flex-start;flex-direction:column}.voice-area{justify-content:flex-start;flex-wrap:wrap}h1{font-size:29px}.job-head{flex-direction:column}}@media(prefers-reduced-motion:no-preference){.voice-button.listening svg{animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.45;transform:scale(.92)}}}
 </style></head>
 <body><main>
-<header><div><h1>Codex 任务池</h1><p>到点在 Ubuntu 上继续 Codex。额度不足会顺延；需要你决策、测试失败或推送冲突会暂停，不会盲目循环。</p></div><div class="tag">Butler · 5 小时调度</div></header>
+<header><div><h1>Codex 任务池</h1><p>到点在 Ubuntu 上继续 Codex。额度不足会顺延；需要你决策、测试失败或推送冲突会暂停，不会盲目循环。</p></div><div class="tag">Ubuntu · 5 小时调度</div></header>
 <section class="panel"><form id="create"><div class="grid">
 <label>任务名称<input name="title" maxlength="120" required placeholder="例如：优化登录页交互"></label>
+<label>项目<select name="project"><option value="butler">Butler</option><option value="familyos">FamilyOS</option></select></label>
 <label>执行方式<select name="schedule_mode"><option value="once">只执行一次</option><option value="interval">每 5 小时继续</option></select></label>
-<div class="wide field"><div class="field-label"><label for="task-prompt">给 Codex 的明确任务</label><div class="voice-area"><button id="voice-button" class="voice-button" type="button" aria-pressed="false" aria-describedby="voice-status"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"></path></svg><span id="voice-label">语音输入</span></button><span id="voice-status" class="voice-status" role="status" aria-live="polite"></span></div></div><textarea id="task-prompt" name="prompt" maxlength="20000" required placeholder="写清楚目标、验收条件，以及不能改动的范围。"></textarea></div>
 <label>第一次执行时间<input name="next_run" type="datetime-local" required></label>
-<label>Ubuntu 会话 ID（可选）<input name="session_id" maxlength="160" placeholder="留空会创建新会话"></label>
-</div><div class="actions"><button type="submit">加入任务池</button><span class="hint">固定工作目录：Butler 自动化仓库；成功后自动测试、推送与部署。</span></div><div id="notice" class="notice"></div></form></section>
+<div class="wide field"><div class="field-label"><label for="task-prompt">给 Codex 的明确任务</label><div class="voice-area"><button id="voice-button" class="voice-button" type="button" aria-pressed="false" aria-describedby="voice-status"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"></path></svg><span id="voice-label">语音输入</span></button><span id="voice-status" class="voice-status" role="status" aria-live="polite"></span></div></div><textarea id="task-prompt" name="prompt" maxlength="20000" required placeholder="写清楚目标、验收条件，以及不能改动的范围。"></textarea></div>
+<label class="wide">Ubuntu 会话 ID（可选）<input name="session_id" maxlength="160" placeholder="留空会创建新会话；循环任务会自动续接首次会话"></label>
+</div><div class="actions"><button type="submit">加入任务池</button><span class="hint">项目目录固定在允许列表中；成功后自动验证并推送对应 GitHub 仓库。</span></div><div id="notice" class="notice"></div></form></section>
 <div class="section-title"><h2>任务</h2><button class="secondary" onclick="loadJobs()">刷新</button></div><section id="jobs" class="jobs"><div class="empty">正在读取…</div></section>
 </main><script>
 const statusName={scheduled:'已排期',running:'运行中',waiting_quota:'等待额度',needs_attention:'需要你处理',failed:'失败',succeeded:'已完成'};
@@ -355,7 +403,7 @@ async function api(path,opt){const r=await fetch(path,opt);const d=await r.json(
 const promptInput=document.querySelector('#task-prompt');const voiceButton=document.querySelector('#voice-button');const voiceLabel=document.querySelector('#voice-label');const voiceStatus=document.querySelector('#voice-status');const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;let recognition=null;let listening=false;let voiceBase='';let voiceFinal='';let voiceError=false;
 function voiceState(active,message='',error=false){listening=active;voiceButton.classList.toggle('listening',active);voiceButton.setAttribute('aria-pressed',String(active));voiceLabel.textContent=active?'停止听写':'语音输入';voiceStatus.textContent=message;voiceStatus.classList.toggle('error',error)}
 if(!window.isSecureContext){voiceButton.disabled=true;voiceState(false,'请先信任这个 HTTPS 地址，浏览器才能使用麦克风。',true)}else if(!Recognition){voiceButton.disabled=true;voiceState(false,'当前浏览器不支持语音听写，请使用最新版 Edge 或 Chrome。',true)}else{recognition=new Recognition();recognition.lang='zh-CN';recognition.continuous=true;recognition.interimResults=true;recognition.onstart=()=>voiceState(true,'正在听，请直接说任务内容…');recognition.onresult=e=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const text=e.results[i][0].transcript.trim();if(e.results[i].isFinal&&text)voiceFinal+=(voiceFinal?' ':'')+text;else if(text)interim+=(interim?' ':'')+text}const spoken=[voiceFinal,interim].filter(Boolean).join(' ');const next=[voiceBase,spoken].filter(Boolean).join(voiceBase&&spoken?'\n':'');promptInput.value=next.slice(0,20000);promptInput.dispatchEvent(new Event('input',{bubbles:true}));if(next.length>20000){voiceError=true;recognition.stop();voiceState(false,'任务内容已达到 20000 字上限。',true)}};recognition.onerror=e=>{voiceError=true;const messages={'not-allowed':'没有麦克风权限，请在地址栏左侧允许麦克风后重试。','audio-capture':'没有检测到可用麦克风。','no-speech':'没有听到声音，请靠近麦克风后重试。','network':'语音识别服务暂时无法连接，请稍后重试。'};voiceState(false,messages[e.error]||`语音输入失败：${e.error}`,true)};recognition.onend=()=>{if(!voiceError)voiceState(false,voiceFinal?'听写完成，可以继续编辑。':'听写已停止。')};voiceButton.addEventListener('click',()=>{if(listening){recognition.stop();return}voiceBase=promptInput.value.trimEnd();voiceFinal='';voiceError=false;voiceState(false,'正在请求麦克风…');try{recognition.start()}catch{voiceState(false,'麦克风正在启动，请稍后再试。',true)}})}
-async function loadJobs(){const root=document.querySelector('#jobs');try{const {jobs}=await api('api/jobs');if(!jobs.length){root.innerHTML='<div class="panel empty">还没有任务。先把一个明确任务放进来。</div>';return}root.innerHTML=jobs.map(j=>`<article class="job"><div class="job-head"><div><h3>${esc(j.title)}</h3><div class="meta">下次：${when(j.next_run_at)} · ${j.schedule_mode==='interval'?'每 '+Math.round(j.interval_minutes/60)+' 小时':'一次性'}${j.session_id?' · 会话 '+esc(j.session_id.slice(0,12))+'…':''}</div></div><span class="status ${esc(j.status)}">${esc(statusName[j.status]||j.status)}${j.enabled?'':' · 已暂停'}</span></div><details><summary>查看任务和最近结果</summary><pre>任务：${esc(j.prompt)}\n\n最近结果：\n${esc(j.last_output||'尚未执行')}</pre></details><div class="actions"><button onclick="act(${j.id},'run')">立即运行</button><button class="secondary" onclick="act(${j.id},'toggle')">${j.enabled?'暂停':'恢复'}</button><button class="danger" onclick="removeJob(${j.id})">删除</button></div></article>`).join('')}catch(e){root.innerHTML=`<div class="panel empty">${esc(e.message)}</div>`}}
+async function loadJobs(){const root=document.querySelector('#jobs');try{const {jobs}=await api('api/jobs');if(!jobs.length){root.innerHTML='<div class="panel empty">还没有任务。先把一个明确任务放进来。</div>';return}root.innerHTML=jobs.map(j=>`<article class="job"><div class="job-head"><div><h3>${esc(j.title)}</h3><div class="meta">${esc(j.project_name)} · 下次：${when(j.next_run_at)} · ${j.schedule_mode==='interval'?'每 '+Math.round(j.interval_minutes/60)+' 小时':'一次性'}${j.session_id?' · 会话 '+esc(j.session_id.slice(0,12))+'…':''}</div></div><span class="status ${esc(j.status)}">${esc(statusName[j.status]||j.status)}${j.enabled?'':' · 已暂停'}</span></div><details><summary>查看任务和最近结果</summary><pre>任务：${esc(j.prompt)}\n\n最近结果：\n${esc(j.last_output||'尚未执行')}</pre></details><div class="actions"><button onclick="act(${j.id},'run')">立即运行</button><button class="secondary" onclick="act(${j.id},'toggle')">${j.enabled?'暂停':'恢复'}</button><button class="danger" onclick="removeJob(${j.id})">删除</button></div></article>`).join('')}catch(e){root.innerHTML=`<div class="panel empty">${esc(e.message)}</div>`}}
 async function act(id,name){try{await api(`api/jobs/${id}/${name}`,{method:'POST'});await loadJobs()}catch(e){alert(e.message)}}
 async function removeJob(id){if(!confirm('确定删除这个任务？'))return;try{await api(`api/jobs/${id}`,{method:'DELETE'});await loadJobs()}catch(e){alert(e.message)}}
 const form=document.querySelector('#create');const dt=form.elements.next_run;const d=new Date(Date.now()+5*60*1000);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());dt.value=d.toISOString().slice(0,16);
@@ -423,12 +471,16 @@ class Handler(BaseHTTPRequestHandler):
                 data = self.body_json()
                 title = str(data.get("title", "")).strip()[:120]
                 prompt = str(data.get("prompt", "")).strip()
+                project_key = str(data.get("project", "butler")).strip().lower()
+                project = PROJECTS.get(project_key)
                 mode = str(data.get("schedule_mode", "once"))
                 interval = int(data.get("interval_minutes", 300))
                 next_run = int(data.get("next_run_at", now()))
                 session = str(data.get("session_id", "")).strip() or None
                 if not title or not prompt or len(prompt) > MAX_PROMPT:
                     raise ValueError("任务名称和任务内容不能为空。")
+                if not project:
+                    raise ValueError("项目无效。")
                 if mode not in {"once", "interval"}:
                     raise ValueError("执行方式无效。")
                 if interval < 30 or interval > 10080:
@@ -440,7 +492,17 @@ class Handler(BaseHTTPRequestHandler):
                     cursor = conn.execute(
                         "INSERT INTO jobs(title,prompt,repo_path,session_id,schedule_mode,"
                         "interval_minutes,next_run_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                        (title, prompt, BUTLER_REPO, session, mode, interval, next_run, stamp, stamp),
+                        (
+                            title,
+                            prompt,
+                            project["repo"],
+                            session,
+                            mode,
+                            interval,
+                            next_run,
+                            stamp,
+                            stamp,
+                        ),
                     )
                     conn.commit()
                 self.send_json(201, {"ok": True, "id": cursor.lastrowid})
