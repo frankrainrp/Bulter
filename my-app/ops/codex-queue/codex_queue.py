@@ -268,14 +268,18 @@ def finish_job(
 ) -> None:
     enabled = 1
     retry_count = job["retry_count"]
+    interval_seconds = job["interval_minutes"] * 60
+    next_interval_at = job["next_run_at"] + interval_seconds
+    while next_interval_at <= now():
+        next_interval_at += interval_seconds
     if status == "waiting_quota":
-        next_run_at = now() + job["interval_minutes"] * 60
+        next_run_at = next_interval_at
     elif retry:
         retry_count += 1
         next_run_at = now() + 15 * 60
     elif status == "succeeded" and job["schedule_mode"] == "interval":
         retry_count = 0
-        next_run_at = now() + job["interval_minutes"] * 60
+        next_run_at = next_interval_at
         status = "scheduled"
     else:
         next_run_at = job["next_run_at"]
