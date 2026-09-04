@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+test_*.py
+*.md
+*.service
+*.timer
+account-login.sh
+register-project.sh

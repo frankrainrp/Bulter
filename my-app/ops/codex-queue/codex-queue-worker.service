@@ -9,6 +9,10 @@ User=frankrain
 Group=frankrain
 Environment=HOME=/home/frankrain
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=CODEX_QUEUE_ACCOUNTS_ROOT=/home/frankrain/server/data/codex-queue/accounts
+Environment=CODEX_QUEUE_PROJECTS_ROOT=/home/frankrain/server/automation-workspaces
+Environment=CODEX_QUEUE_RUNNER_IMAGE=local/codex-queue-runner:0.151.0
 WorkingDirectory=/home/frankrain/server/automation-workspaces
 ExecStart=/usr/bin/python3 /home/frankrain/server/apps/codex-queue/codex_queue.py --db /home/frankrain/server/data/codex-queue/queue.sqlite run-due
 TimeoutStartSec=4h30min
+NoNewPrivileges=true

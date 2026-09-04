@@ -1,0 +1,16 @@
+[Unit]
+Description=Codex task queue Docker web UI
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/frankrain/server/apps/codex-queue
+ExecStart=/usr/bin/docker compose up --build -d --wait
+ExecStop=/usr/bin/docker compose stop
+TimeoutStartSec=10min
+
+[Install]
+WantedBy=multi-user.target

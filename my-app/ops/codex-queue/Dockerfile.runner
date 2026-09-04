@@ -1,0 +1,12 @@
+FROM node:22-bookworm-slim
+
+ARG CODEX_VERSION=0.151.0
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends bash ca-certificates git openssh-client python3 python3-pil \
+    && npm install --global "@openai/codex@${CODEX_VERSION}" \
+    && corepack enable \
+    && rm -rf /var/lib/apt/lists/* /root/.npm
+USER 1000:1000
+ENV HOME=/codex-home CODEX_HOME=/codex-home
+WORKDIR /workspace
+ENTRYPOINT ["codex"]

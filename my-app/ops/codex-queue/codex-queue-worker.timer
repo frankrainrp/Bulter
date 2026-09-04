@@ -1,10 +1,10 @@
 [Unit]
-Description=Check Codex project task queue every minute
+Description=Check Codex project task queue every 30 seconds
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=1min
-AccuracySec=10s
+OnUnitActiveSec=30s
+AccuracySec=5s
 Persistent=true
 
 [Install]

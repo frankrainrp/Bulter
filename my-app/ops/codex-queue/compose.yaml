@@ -1,0 +1,29 @@
+services:
+  web:
+    image: local/codex-queue-web:2
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    init: true
+    ports:
+      - "0.0.0.0:3765:3765"
+    volumes:
+      - /home/frankrain/server/data/codex-queue:/data
+    tmpfs:
+      - /tmp:rw,nosuid,noexec,size=32m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.50
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3765/api/health', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

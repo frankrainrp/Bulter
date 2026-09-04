@@ -1,0 +1,10 @@
+FROM python:3.13-slim
+
+RUN useradd --uid 1000 --create-home --shell /usr/sbin/nologin queue
+WORKDIR /app
+COPY codex_queue.py /app/codex_queue.py
+
+USER 1000:1000
+EXPOSE 3765
+ENTRYPOINT ["python", "/app/codex_queue.py"]
+CMD ["--db", "/data/queue.sqlite", "serve", "--host", "0.0.0.0", "--port", "3765"]
