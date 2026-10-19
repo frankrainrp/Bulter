@@ -6,6 +6,10 @@ client (Claude Desktop, Claude Code, …). Once connected, you can ask an assist
 things like _"what's due this week?"_ or _"add a note for today's lecture"_ and it
 will read and write Butler's data through the tools below.
 
+[Windows server package](https://github.com/frankrainrp/Bulter/releases/tag/v0.1.0) · [Component guide](../docs/DISTRIBUTION.md) · [中文](../docs/README.zh-CN.md)
+
+The MCP vault is independent of the browser/SQLite store. Tool calls execute directly; configure approvals in the MCP client.
+
 ## Tools (14)
 
 | Domain | Tools |
@@ -51,9 +55,9 @@ Add to `claude_desktop_config.json`
   "mcpServers": {
     "butler": {
       "command": "node",
-      "args": ["D:/User/asus/Desktop/Bulter/butler-mcp/dist/index.js"],
+      "args": ["C:/Apps/Bulter/butler-mcp/dist/index.js"],
       "env": {
-        "BUTLER_VAULT": "D:/User/asus/Desktop/Bulter/butler-mcp/butler-vault.json"
+        "BUTLER_VAULT": "C:/Apps/Bulter/butler-mcp/butler-vault.json"
       }
     }
   }

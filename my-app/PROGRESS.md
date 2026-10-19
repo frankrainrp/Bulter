@@ -3,6 +3,10 @@
 > 每一次有效改动都记录在此文件中，按时间倒序排列（最新在最上方）。
 > 格式：`## [序号] YYYY-MM-DD HH:mm — 改动标题`
 
+## [090] 2026-10-19 — Recruiter-facing distribution and documentation
+
+Added an English root README, Chinese attachment, component/port guide and two deferred illustration briefs. Primary/alternate Ollama routes now accept independent model overrides; visible route labels no longer name private devices. Windows packages use loopback and fresh local data. The independent MCP vault is documented accurately. Existing layout and interactions are preserved.
+
 ## 📚 全部条目索引（点标题跳详细内容）
 
 | # | 标题 | 主要产出 |
@@ -3300,4 +3304,3 @@ const APPS: MiniApp[] = [
 - 按月索引：[docs/progress/INDEX.md](docs/progress/INDEX.md)
 
 > 接班 AI 只需 Read PROGRESS 第一条（offset=0, limit=100）即可获取当前状态;旧条目按需 Glob/Grep 关键字定位。
-

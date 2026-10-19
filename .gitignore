@@ -45,3 +45,11 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 .tmp-queue.sqlite*
+
+# Local distribution and MCP verification state
+my-app/apps/web/data/
+butler-mcp/data/
+butler-mcp/scripts/smoke-vault.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

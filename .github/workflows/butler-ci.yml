@@ -42,3 +42,19 @@ jobs:
 
       - name: Build Butler
         run: pnpm --filter @smart-hub/web build
+
+  mcp:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: butler-mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: butler-mcp/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run smoke

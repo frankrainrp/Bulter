@@ -12,16 +12,18 @@ export const dynamic = "force-dynamic"; // 强制动态，禁用静态生成
 interface ModelEndpoint {
   name: "server" | "windows";
   baseURL: string;
+  model?: string;
 }
 
 function endpointCandidates(modelId: AiModelId): ModelEndpoint[] {
   const server: ModelEndpoint = {
     name: "server",
     baseURL: process.env.OLLAMA_SERVER_BASE_URL || process.env.DEEPSEEK_BASE_URL || "http://ollama:11434/v1",
+    model: process.env.OLLAMA_SERVER_MODEL?.trim() || undefined,
   };
   const windowsUrl = process.env.OLLAMA_WINDOWS_BASE_URL?.trim();
   const windows: ModelEndpoint | null = windowsUrl
-    ? { name: "windows", baseURL: windowsUrl }
+    ? { name: "windows", baseURL: windowsUrl, model: process.env.OLLAMA_WINDOWS_MODEL?.trim() || undefined }
     : null;
 
   if (!windows) return [server];
@@ -168,7 +170,7 @@ export async function POST(req: Request) {
           maxRetries: 0,
         });
         stream = await openai.chat.completions.create(
-          createParams as Parameters<typeof openai.chat.completions.create>[0],
+          { ...createParams, model: endpoint.model || createParams.model } as Parameters<typeof openai.chat.completions.create>[0],
         ) as AsyncIterable<unknown>;
         activeEndpoint = endpoint;
         break;
