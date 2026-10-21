@@ -1,31 +1,31 @@
 # ============================================================
-# Butler — 仓库根级忽略规则
+# Butler — repository ignore rules
 # ============================================================
 
-# 依赖
+# Dependencies
 node_modules/
 .pnp
 .pnp.js
 
-# Next.js 构建产物
+# Next.js build output
 .next/
 out/
 
-# 环境变量（包含 API key，绝不能提交）
+# Local environment and credentials
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# 日志
+# Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# 编辑器
+# Editors
 .vscode/
 .idea/
 *.swp
@@ -38,7 +38,7 @@ Thumbs.db
 # Turborepo
 .turbo/
 
-# TypeScript 增量编译
+# TypeScript incremental build
 *.tsbuildinfo
 
 # Local Python/SQLite smoke-test artifacts
@@ -53,3 +53,6 @@ butler-mcp/scripts/smoke-vault.json
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+# Workstation-specific agent permissions
+.claude/settings.local.json
