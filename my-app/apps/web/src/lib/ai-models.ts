@@ -1,9 +1,5 @@
-// ============================================================
-// lib/ai-models.ts — 可切换的 AI 模型注册表
-//
-// 家庭部署只展示两个真实可用的本地推理路由：
-// Ubuntu 家庭服务器（常在线）与 Windows RTX 5090（高性能）。
-// ============================================================
+// Configurable primary and alternate Ollama inference routes.
+// Compatibility IDs preserve saved preferences; environment overrides select actual models.
 
 export type AiModelId =
   | "deepseek-v4-flash"
@@ -14,25 +10,25 @@ export type AiModelId =
 
 export interface AiModelMeta {
   id: AiModelId;
-  /** 实际传给 DeepSeek API 的 model 字段 */
+  /** Model fallback used when no environment override is configured. */
   apiModel: string;
-  /** 显示名（短，badge 用） */
+  /** Short route label. */
   label: string;
-  /** 副标题（下拉项里用） */
+  /** Route subtitle. */
   tagline: string;
-  /** 简短描述（下拉项里用） */
+  /** Route description. */
   desc: string;
-  /** 估算成本档：low / mid / high */
+  /** Usage display tier. */
   tier: "low" | "mid" | "high";
-  /** 是否支持工具调用（toggle_complete 等） */
+  /** Whether the route supports structured tool calls. */
   supportsTools: boolean;
-  /** V4 Thinking 模式参数（见 DeepSeek thinking_mode 官方文档） */
+  /** Optional provider-specific reasoning parameters. */
   thinking?: {
     reasoningEffort: "high" | "max";
   };
-  /** #12 接口预留：下拉可见但暂未接入 API（点击不切换，提示敬请期待）*/
+  /** Reserved provider option without an active API adapter.*/
   placeholder?: boolean;
-  /** 服务端据此选择对应的 Ollama 地址。 */
+  /** Selects the configured server-side Ollama route. */
   route: "server" | "windows";
 }
 
@@ -69,5 +65,5 @@ export function isValidModelId(id: string): id is AiModelId {
   return AI_MODELS.some((m) => m.id === id);
 }
 
-// localStorage 持久化 key
+// Persisted model-selection key.
 export const MODEL_STORAGE_KEY = "butler.selectedModel";

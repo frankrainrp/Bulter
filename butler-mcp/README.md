@@ -1,79 +1,26 @@
-# Butler MCP Server
+# Butler MCP server
 
-A [Model Context Protocol](https://modelcontextprotocol.io) server that exposes
-Butler's **notes**, **tasks**, **calendar events**, and **workflows** to any MCP
-client (Claude Desktop, Claude Code, …). Once connected, you can ask an assistant
-things like _"what's due this week?"_ or _"add a note for today's lecture"_ and it
-will read and write Butler's data through the tools below.
-
-[Windows server package](https://github.com/frankrainrp/Bulter/releases/tag/v0.1.0) · [Component guide](../docs/DISTRIBUTION.md) · [中文](../docs/README.zh-CN.md)
-
-The MCP vault is independent of the browser/SQLite store. Tool calls execute directly; configure approvals in the MCP client.
-
-## Tools (14)
+This TypeScript service exposes 14 tools through Model Context Protocol JSON-RPC over stdio. An MCP client invokes validated operations against an atomic JSON vault.
 
 | Domain | Tools |
-| --- | --- |
-| **Notes** | `list_notes`, `get_note`, `search_notes`, `create_note`, `update_note` |
-| **Tasks** | `list_tasks`, `create_task`, `complete_task`, `update_task` |
-| **Events** | `list_events`, `create_event` |
-| **Workflows** | `list_workflows`, `create_workflow`, `toggle_workflow` |
+|---|---|
+| Notes | `list_notes`, `get_note`, `search_notes`, `create_note`, `update_note` |
+| Tasks | `list_tasks`, `create_task`, `complete_task`, `update_task` |
+| Events | `list_events`, `create_event` |
+| Recurring workflows | `list_workflows`, `create_workflow`, `toggle_workflow` |
 
-> "Events" are not a separate store — a task that has a `dueDate` is automatically
-> a calendar event. `list_events` simply projects dated tasks onto a date range.
-> "Workflows" are recurring-task automations (e.g. _gym 4×/week_).
+Dated tasks are projected as calendar events. Recurring workflows describe repeated task generation.
 
-## Data source — the vault
+## Build and run
 
-Butler's live data lives in the browser's **IndexedDB**, which a separate server
-process cannot read. The MCP server therefore reads/writes a JSON **vault file**
-that acts as the shared source of truth. The path is configurable:
-
-```
-BUTLER_VAULT=/absolute/path/to/butler-vault.json
+```sh
+npm ci
+npm run build
+npm run smoke
 ```
 
-Defaults to `./butler-vault.json` (seeded with sample study data). Writes are
-atomic (temp file + rename); reads are fresh on every call, so edits made by
-Butler's export — or by you in an editor — are picked up without a restart.
+Set `BUTLER_VAULT` to a writable absolute JSON path, then start `node dist/index.js` from a compatible MCP client. The entry point and npm `bin` require the built `dist/` files. Reads reload the vault; writes replace it atomically through a temporary file.
 
-## Build & test
+The service has its own data store. Web IndexedDB/SQLite state is not synchronized automatically. Tool calls execute through this service; configure approvals in the MCP client.
 
-```bash
-npm install
-npm run build      # tsc → dist/
-npm run smoke      # spawns the server, runs the JSON-RPC handshake, calls tools
-```
-
-## Connect to Claude Desktop
-
-Add to `claude_desktop_config.json`
-(`%APPDATA%\Claude\claude_desktop_config.json` on Windows):
-
-```json
-{
-  "mcpServers": {
-    "butler": {
-      "command": "node",
-      "args": ["C:/Apps/Bulter/butler-mcp/dist/index.js"],
-      "env": {
-        "BUTLER_VAULT": "C:/Apps/Bulter/butler-mcp/butler-vault.json"
-      }
-    }
-  }
-}
-```
-
-Restart Claude Desktop; the 14 tools appear under the 🔌 menu.
-
-## Project layout
-
-```
-butler-mcp/
-├─ src/
-│  ├─ index.ts     # server entry — registers the 14 tools (stdio transport)
-│  ├─ store.ts     # JSON-vault read/modify/write (atomic)
-│  └─ types.ts     # mirrors Butler's Note / DdlItem / RecurringTask
-├─ scripts/smoke.mjs   # end-to-end JSON-RPC client test
-└─ butler-vault.json   # seed data
-```
+[Windows package and client configuration](../docs/DISTRIBUTION.md)

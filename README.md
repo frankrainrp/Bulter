@@ -1,46 +1,36 @@
-# Bulter — Local AI Learning Assistant
+<p align="center"><img src="my-app/apps/web/public/assets/logo.png" alt="Butler logo" width="100"></p>
 
-Turn study material and conversations into tasks, calendar entries and linked notes, with user confirmation before the web assistant applies changes.
+# Butler — Local AI Learning Workspace
+
+Butler combines tasks, calendar events, Markdown notes and document-assisted chat in a local web application. React renders the workspace, Next.js serves the API, and SQLite stores application state. Model-generated changes are presented as confirmation cards before the web application applies them.
 
 **TypeScript · Next.js · React · SQLite · IndexedDB · Ollama · MCP**
 
-[Download Windows packages](https://github.com/frankrainrp/Bulter/releases/tag/v0.1.0) · [Installation & component guide](docs/DISTRIBUTION.md) · [中文说明](docs/README.zh-CN.md)
+[Windows downloads](https://github.com/frankrainrp/Bulter/releases/tag/v0.1.0) · [Installation](docs/DISTRIBUTION.md) · [Architecture](my-app/docs/architecture.md)
 
-## What you can do
+## Implementation
 
-- Organize tasks, recurring work, calendar entries and Markdown notes in one workspace.
-- Ask an assistant to prepare changes, inspect the confirmation card, then apply them.
-- Extract text from PDFs; use browser-side MiniLM filtering before sending selected content to inference. Scanned documents use an optional Mistral OCR integration.
-- Build schema-driven panels from structured data sources and AI-generated specifications.
-- Connect an MCP client to the separate **14-tool MCP server** for notes, tasks, dated events and recurring workflows.
-
-## Try the Windows application
-
-1. Download **Bulter-Windows-x64.zip** from the release and extract it into a writable folder.
-2. Double-click **Start-Bulter.cmd**. Open **http://127.0.0.1:3000** when the server is ready.
-3. Try Tasks, Calendar and Notes. The local planning features work without a model.
-4. For AI, install Ollama separately and pull the model named in `config.json` (the package starts with `qwen3:0.6b`). Restart the application after changing configuration. Model weights are separate downloads.
-
-The package includes a Windows Node.js runtime, the built browser client, the local Next.js API server and production dependencies. It starts with an empty database. Stop the console with Ctrl+C. The English/Chinese language option covers core navigation and settings; some panel text remains Chinese.
-
-## Engineering walkthrough
-
-| Component | Implementation | Source |
+| Feature | Implementation | Source |
 |---|---|---|
-| Browser workspace | React, TypeScript, Dexie/IndexedDB; task/calendar/note views | [UI source](my-app/apps/web/src/components), [local store](my-app/apps/web/src/lib/db.ts) |
-| Local persistence | Next.js `/api/state`, validated keys and SQLite state storage | [API](my-app/apps/web/src/app/api/state/route.ts), [SQLite](my-app/apps/web/src/lib/server-db.ts) |
-| Inference | OpenAI-compatible streaming calls to configurable primary/alternate Ollama routes | [Chat API](my-app/apps/web/src/app/api/chat/route.ts), [model registry](my-app/apps/web/src/lib/ai-models.ts) |
-| Assisted changes | Tool schemas, pending proposals and a confirmation card in the web app | [Tools](my-app/apps/web/src/lib/ai-tools.ts), [confirmation UI](my-app/apps/web/src/components/ConfirmCard.tsx) |
-| Document processing | unpdf, `Xenova/all-MiniLM-L6-v2`, optional Mistral OCR | [Parser](my-app/apps/web/src/lib/document-parser.ts), [filter](my-app/apps/web/src/lib/semantic-filter.ts) |
-| MCP integration | 14 tools over stdio, backed by an atomic JSON vault | [MCP server](butler-mcp/src/index.ts), [store](butler-mcp/src/store.ts) |
+| Tasks, calendar and notes | React components, typed records, recurring-task materialization and linked notes | [Components](my-app/apps/web/src/components), [types](my-app/apps/web/src/lib/types.ts) |
+| Persistent state | Browser IndexedDB plus validated Next.js state endpoints backed by SQLite | [Browser database](my-app/apps/web/src/lib/db.ts), [server database](my-app/apps/web/src/lib/server-db.ts) |
+| Streaming assistant | OpenAI-compatible requests to configurable primary and alternate Ollama endpoints | [Chat API](my-app/apps/web/src/app/api/chat/route.ts), [route registry](my-app/apps/web/src/lib/ai-models.ts) |
+| Assisted writes | Tool schemas produce pending operations; the user confirms changes in the browser | [Tools](my-app/apps/web/src/lib/ai-tools.ts), [confirmation card](my-app/apps/web/src/components/ConfirmCard.tsx) |
+| Document processing | `unpdf` extracts PDF text; `Xenova/all-MiniLM-L6-v2` selects relevant passages; Mistral OCR handles optional scanned-document processing | [Parser](my-app/apps/web/src/lib/document-parser.ts), [semantic filter](my-app/apps/web/src/lib/semantic-filter.ts) |
+| MCP tools | Separate stdio server with 14 tools and an atomic JSON vault | [MCP server](butler-mcp/README.md) |
 
-The historical IDs `deepseek-v4-flash` and `deepseek-v4-thinking` select routes; they are not evidence that DeepSeek V4 is running. The source registry falls back to `huihui_ai/qwen3-abliterated:30b`. `OLLAMA_SERVER_MODEL` and `OLLAMA_WINDOWS_MODEL` override the actual model independently. The portable launcher sets these from `config.json`.
+## Run on Windows
 
-The MCP server uses its own JSON vault. It does **not** automatically synchronize with the browser or SQLite store. MCP tool calls execute directly; the web application's confirmation-card policy does not automatically apply to an external MCP client.
+1. Extract `Bulter-Windows-x64.zip` into a writable directory.
+2. Run `Start-Bulter.cmd` and open `http://127.0.0.1:3000`.
+3. Create tasks, events and notes. The package creates its own local database.
+4. For chat, install Ollama and the model selected in `config.json`.
+
+The package includes Node.js, the browser application, the Next.js server and production dependencies. `config.json` defaults to `qwen3:0.6b`; model weights are installed separately. Primary and alternate endpoints have independent model settings. The source registry uses `huihui_ai/qwen3-abliterated:30b` when no environment override is supplied.
 
 ## Build from source
 
-Requires Node.js 20+ and pnpm 9. The ready-to-run Windows package bundles its own runtime.
+Requires Node.js 20+ and pnpm 9.
 
 ```sh
 git clone https://github.com/frankrainrp/Bulter.git
@@ -48,22 +38,28 @@ cd Bulter/my-app
 pnpm install --frozen-lockfile
 ```
 
-Copy `apps/web/.env.local.example` to `apps/web/.env.local`, configure a model already installed in Ollama, then:
+Copy `apps/web/.env.local.example` to `apps/web/.env.local`, configure an installed Ollama model, then run:
 
 ```sh
 pnpm --filter @smart-hub/web dev --hostname 127.0.0.1
-# production build:
 pnpm --filter @smart-hub/web build
 ```
 
-For MCP: `cd butler-mcp`, then `npm ci`, `npm run build`, `npm run smoke`. See the [MCP guide](butler-mcp/README.md).
+Build the MCP component separately:
 
-## Editions and scope
+```sh
+cd ../butler-mcp
+npm ci
+npm run build
+npm run smoke
+```
 
-[Hackathon](https://github.com/frankrainrp/Hackathon) is a related learning-assistant edition with Brightspace synchronization, course text retrieval and an existing Windows bundle. Its school worker is optional and is not included in this core release. The two repositories belong to one project family rather than two independent products.
+## Components and data boundaries
 
-This is a single-user, loopback application. `/api/state` is not protected by internet-grade authentication; keep the packaged listener on `127.0.0.1`. Billing screens are simulations. Tauri and multi-tenant cloud authentication are not delivered by this release. Model services, OCR services and first-use MiniLM downloads have their own connectivity requirements.
+The browser and API form a single-user application bound to loopback. The MCP component is a separate process with its own JSON vault; it does not automatically synchronize with browser or SQLite state. MCP clients control approval for their own tool calls.
 
-## Planned illustrations
+[`C270_FA_DEPLOYMENT`](https://github.com/frankrainrp/C270_FA_DEPLOYMENT) is the Node.js/Express/MongoDB Study Butler implementation referenced in the resume. Its Docker deployment is separate from this Next.js/Ollama package. [`Hackathon`](https://github.com/frankrainrp/Hackathon) contains the course-synchronization edition.
 
-Two illustrations are specified in [the diagram brief](docs/DIAGRAM_BRIEF.md): a technical implementation map and a plain-language capability map. They will be produced in a later step.
+## Development
+
+[Agent entry](AGENTS.md) · [Current status](my-app/PROGRESS.md) · [Setup](my-app/docs/setup.md) · [Integration notes](my-app/docs/pitfalls.md)
