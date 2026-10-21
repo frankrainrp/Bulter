@@ -1,4 +1,4 @@
-<p align="center"><img src="my-app/apps/web/public/assets/logo.png" alt="Butler logo" width="100"></p>
+<p align="center"><img src="docs/assets/butler-mark.svg" alt="Butler logo" width="100"></p>
 
 # Butler — Local AI Learning Workspace
 
@@ -58,7 +58,7 @@ npm run smoke
 
 The browser and API form a single-user application bound to loopback. The MCP component is a separate process with its own JSON vault; it does not automatically synchronize with browser or SQLite state. MCP clients control approval for their own tool calls.
 
-[`C270_FA_DEPLOYMENT`](https://github.com/frankrainrp/C270_FA_DEPLOYMENT) is the Node.js/Express/MongoDB Study Butler implementation referenced in the resume. Its Docker deployment is separate from this Next.js/Ollama package. [`Hackathon`](https://github.com/frankrainrp/Hackathon) contains the course-synchronization edition.
+[`C270_FA_DEPLOYMENT`](https://github.com/frankrainrp/C270_FA_DEPLOYMENT) is the Node.js/Express/MongoDB Study Butler implementation. Its Docker deployment is separate from this Next.js/Ollama package. [`Hackathon`](https://github.com/frankrainrp/Hackathon) contains the course-synchronization edition.
 
 ## Development
 
