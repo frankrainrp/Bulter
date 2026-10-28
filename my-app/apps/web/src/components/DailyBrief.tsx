@@ -12,6 +12,7 @@
 import React from "react";
 import { X, Timer, Flame, Sparkles } from "lucide-react";
 import type { DdlItem } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   ddls: DdlItem[];
@@ -25,15 +26,16 @@ interface Props {
 function effStatus(d: DdlItem): "todo" | "in_progress" | "done" {
   return d.status ?? (d.completed ? "done" : "todo");
 }
-function greetByHour(h: number): string {
-  if (h < 5) return "夜深了";
-  if (h < 11) return "早上好";
-  if (h < 14) return "中午好";
-  if (h < 18) return "下午好";
-  return "晚上好";
+function greetKeyByHour(h: number): string {
+  if (h < 5) return "chat.greet.night";
+  if (h < 11) return "chat.greet.morning";
+  if (h < 14) return "chat.greet.noon";
+  if (h < 18) return "chat.greet.afternoon";
+  return "chat.greet.evening";
 }
 
 export default function DailyBrief({ ddls, streakDays = 0, userName = "Feng", onStartFocus, onJumpToTask, onDismiss }: Props) {
+  const { t } = useT();
   const now = new Date();
   const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const todo = ddls.filter((d) => effStatus(d) !== "done");
@@ -43,15 +45,15 @@ export default function DailyBrief({ ddls, streakDays = 0, userName = "Feng", on
 
   // 摘要文案
   const parts: string[] = [];
-  if (overdue.length > 0) parts.push(`${overdue.length} 项逾期`);
-  if (todayDue.length > 0) parts.push(`今天 ${todayDue.length} 项到期`);
+  if (overdue.length > 0) parts.push(t("db.overdueN", { n: overdue.length }));
+  if (todayDue.length > 0) parts.push(t("db.todayDueN", { n: todayDue.length }));
   const summary =
     parts.length > 0
-      ? `你有 ${parts.join("、")}。`
-      : "今天没有到期任务，轻松一下 ☕。";
+      ? t("db.summaryHas", { parts: parts.join(t("db.sep")) })
+      : t("db.summaryNone");
   const suggestion = nearest
-    ? `要不要先专注 25 分钟，搞定「${nearest.taskName}」？`
-    : "要不要开一个 25 分钟专注，开个好头？";
+    ? t("db.focusNearest", { task: nearest.taskName })
+    : t("db.focusGeneric");
 
   return (
     <div
@@ -88,11 +90,11 @@ export default function DailyBrief({ ddls, streakDays = 0, userName = "Feng", on
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span className="font-display" style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>
-            {greetByHour(now.getHours())}，{userName}
+            {t("db.greetLine", { greet: t(greetKeyByHour(now.getHours())), name: userName })}
           </span>
           {streakDays > 0 && (
             <span
-              title={`连续打开 ${streakDays} 天`}
+              title={t("db.streakTitle", { n: streakDays })}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 3,
                 padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600,
@@ -100,7 +102,7 @@ export default function DailyBrief({ ddls, streakDays = 0, userName = "Feng", on
                 color: "var(--color-warning)",
               }}
             >
-              <Flame size={11} /> {streakDays} 天
+              <Flame size={11} /> {t("db.streakDays", { n: streakDays })}
             </span>
           )}
         </div>
@@ -108,7 +110,7 @@ export default function DailyBrief({ ddls, streakDays = 0, userName = "Feng", on
           {summary}
           {nearest && (
             <>
-              {" "}最近：
+              {" "}{t("db.recent")}
               <button
                 onClick={() => onJumpToTask?.(nearest.id)}
                 style={{
@@ -131,7 +133,7 @@ export default function DailyBrief({ ddls, streakDays = 0, userName = "Feng", on
             className="glass-btn glass-btn-primary"
             style={{ height: 32, padding: "0 14px", fontSize: 13 }}
           >
-            <Timer size={14} /> 开始专注
+            <Timer size={14} /> {t("db.startFocus")}
           </button>
         </div>
       </div>
@@ -139,8 +141,8 @@ export default function DailyBrief({ ddls, streakDays = 0, userName = "Feng", on
       {/* 关闭 */}
       <button
         onClick={onDismiss}
-        aria-label="知道了"
-        title="知道了"
+        aria-label={t("db.gotIt")}
+        title={t("db.gotIt")}
         style={{
           width: 26, height: 26, borderRadius: 6, border: "none", flexShrink: 0,
           background: "transparent", color: "var(--color-text-faint)", cursor: "pointer",

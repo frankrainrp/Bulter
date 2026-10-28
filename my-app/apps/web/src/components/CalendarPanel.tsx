@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { DdlItem } from "@/lib/types";
 import { useIsMobile } from "@/lib/use-is-mobile";
+import { useT, type TFunc } from "@/lib/i18n";
 
 interface Props {
   ddls: DdlItem[];
@@ -25,7 +26,7 @@ interface Props {
   onMoveEvent?: (id: string, newDate: string, newTime: string) => void;
 }
 
-const WEEK_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
+const WEEK_KEYS = ["cal.week.mon", "cal.week.tue", "cal.week.wed", "cal.week.thu", "cal.week.fri", "cal.week.sat", "cal.week.sun"];
 
 type ViewMode = "month" | "week" | "day";
 
@@ -125,6 +126,7 @@ function MonthView({
   onEditEvent: (d: DdlItem) => void;
 }) {
   const isMobile = useIsMobile();
+  const { t } = useT();
   const [hoverDay, setHoverDay] = useState<string | null>(null);
   const { cells, monthLabel } = useMemo(() => buildMonth(cursor), [cursor]);
   const todayIso = isoDate(new Date());
@@ -175,33 +177,13 @@ function MonthView({
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <NavBtn onClick={goPrev} aria="上一月">
-              <ChevronLeft size={16} />
-            </NavBtn>
-            <button
-              onClick={goToday}
-              style={{
-                padding: "7px 14px",
-                border: "1px solid var(--color-border)",
-                background: "var(--color-bg)",
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 500,
-                color: "var(--color-text-muted)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              今天
-            </button>
-            <NavBtn onClick={goNext} aria="下一月">
-              <ChevronRight size={16} />
-            </NavBtn>
+            {/* 上一月 / 今天 / 下一月 合成一组分段控件，"今天"不再是突兀的独立深色块 */}
+            <NavCluster onPrev={goPrev} onToday={goToday} onNext={goNext} />
             {/* C2 Week View 入口 */}
             {onEnterWeek && (
               <button
                 onClick={() => onEnterWeek(todayIso)}
-                title="切换到周视图"
+                title={t("cal.toWeekView")}
                 style={{
                   padding: "7px 12px",
                   border: "1px solid var(--color-border)",
@@ -244,7 +226,7 @@ function MonthView({
                 background: "var(--color-surface)",
               }}
             >
-              {WEEK_LABELS.map((w) => (
+              {WEEK_KEYS.map((w) => (
                 <div
                   key={w}
                   style={{
@@ -256,7 +238,7 @@ function MonthView({
                     letterSpacing: 0.5,
                   }}
                 >
-                  星期{w}
+                  {t(w)}
                 </div>
               ))}
             </div>
@@ -280,7 +262,7 @@ function MonthView({
                     onClick={() => {
                       if (cell.inMonth) onEnterDay(cell.iso);
                     }}
-                    title={cell.inMonth ? "点击查看时间轴" : ""}
+                    title={cell.inMonth ? t("cal.cellTip") : ""}
                     style={{
                       borderRight: "1px solid var(--color-border-soft)",
                       borderBottom: "1px solid var(--color-border-soft)",
@@ -390,8 +372,8 @@ function DayView({
   onMoveEvent?: (id: string, newDate: string, newTime: string) => void;
 }) {
   const isMobile = useIsMobile();
+  const { t } = useT();
   const dateObj = new Date(date);
-  const weekday = "日一二三四五六"[dateObj.getDay()];
   const isToday = date === isoDate(new Date());
 
   // 时间轴 6AM-11PM（18 行）
@@ -448,7 +430,7 @@ function DayView({
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button
               onClick={onBack}
-              aria-label="返回月视图"
+              aria-label={t("cal.backToMonth")}
               style={{
                 width: 32,
                 height: 32,
@@ -474,7 +456,7 @@ function DayView({
                   letterSpacing: "-0.3px",
                 }}
               >
-                {dateObj.getFullYear()} 年 {dateObj.getMonth() + 1} 月 {dateObj.getDate()} 日
+                {t("cal.dateYMD", { y: dateObj.getFullYear(), m: dateObj.getMonth() + 1, d: dateObj.getDate() })}
                 {isToday && (
                   <span
                     style={{
@@ -488,12 +470,12 @@ function DayView({
                       verticalAlign: "middle",
                     }}
                   >
-                    今天
+                    {t("tasks.date.today")}
                   </span>
                 )}
               </h1>
               <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "4px 0 0" }}>
-                星期{weekday} · {dayDdls.length} 件待办
+                {t("cal.dowCount", { dow: t(`cal.dow.${dateObj.getDay()}`), n: dayDdls.length })}
               </p>
             </div>
           </div>
@@ -573,7 +555,7 @@ function DayView({
                       minHeight: 44,
                       transition: "background 0.12s",
                     }}
-                    title={onCreateAt ? `点击创建 · ${String(h).padStart(2, "0")}:00（事件可拖到此处）` : "点击新建事件"}
+                    title={onCreateAt ? t("cal.createAt", { time: `${String(h).padStart(2, "0")}:00` }) : t("cal.createEvent")}
                   >
                     {slotItems.map((it) => (
                       <TimelinePill
@@ -608,7 +590,7 @@ function DayView({
                     textTransform: "uppercase",
                   }}
                 >
-                  其他时段
+                  {t("cal.otherTimes")}
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {outOfRange.map((it) => (
@@ -631,7 +613,7 @@ function DayView({
           >
             <WidgetCard title="Upcoming Events" icon={<Clock size={13} />}>
               {upcoming.length === 0 ? (
-                <p style={{ fontSize: 12, color: "var(--color-text-faint)", margin: 0 }}>暂无即将到来的事件</p>
+                <p style={{ fontSize: 12, color: "var(--color-text-faint)", margin: 0 }}>{t("cal.noUpcoming")}</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {upcoming.map((d) => (
@@ -661,7 +643,7 @@ function DayView({
 
             <WidgetCard title="Tasks" icon={<ListChecks size={13} />}>
               {todos.length === 0 ? (
-                <p style={{ fontSize: 12, color: "var(--color-text-faint)", margin: 0 }}>没有待办</p>
+                <p style={{ fontSize: 12, color: "var(--color-text-faint)", margin: 0 }}>{t("cal.noTodo")}</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {todos.map((d) => (
@@ -856,12 +838,42 @@ function EventPill({ event, onClick }: { event: DdlItem; onClick: (e: React.Mous
   );
 }
 
-function NavBtn({
-  children, onClick, aria,
+// 分段导航控件：‹ 今天 › 合为一体，共用边框 + 细分隔线，内段透明仅 hover 提亮
+function NavCluster({
+  onPrev, onToday, onNext,
+}: {
+  onPrev: () => void;
+  onToday: () => void;
+  onNext: () => void;
+}) {
+  const { t } = useT();
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "stretch",
+        border: "1px solid var(--color-border)",
+        borderRadius: 8,
+        overflow: "hidden",
+        background: "var(--color-bg)",
+      }}
+    >
+      <SegBtn onClick={onPrev} aria={t("rail.cal.prevMonth")}><ChevronLeft size={16} /></SegBtn>
+      <span style={{ width: 1, background: "var(--color-border)" }} aria-hidden />
+      <SegBtn onClick={onToday} aria={t("cal.backToToday")} wide>{t("tasks.date.today")}</SegBtn>
+      <span style={{ width: 1, background: "var(--color-border)" }} aria-hidden />
+      <SegBtn onClick={onNext} aria={t("rail.cal.nextMonth")}><ChevronRight size={16} /></SegBtn>
+    </div>
+  );
+}
+
+function SegBtn({
+  children, onClick, aria, wide,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   aria: string;
+  wide?: boolean;
 }) {
   const [hov, setHov] = useState(false);
   return (
@@ -871,17 +883,21 @@ function NavBtn({
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
-        width: 32,
         height: 32,
-        borderRadius: 8,
-        border: "1px solid var(--color-border)",
-        background: hov ? "var(--color-surface)" : "var(--color-bg)",
+        minWidth: 32,
+        padding: wide ? "0 14px" : 0,
+        border: "none",
+        background: hov ? "var(--color-surface)" : "transparent",
         cursor: "pointer",
-        color: "var(--color-text-muted)",
-        display: "flex",
+        color: hov ? "var(--color-text)" : "var(--color-text-muted)",
+        fontSize: 13,
+        fontWeight: 500,
+        fontFamily: "inherit",
+        whiteSpace: "nowrap",
+        display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        transition: "background 0.15s",
+        transition: "background 0.15s, color 0.15s",
       }}
     >
       {children}
@@ -1044,6 +1060,7 @@ function WeekView({
   onMoveEvent?: (id: string, newDate: string, newTime: string) => void;
 }) {
   const isMobile = useIsMobile();
+  const { t } = useT();
   // 计算所选日期所在周的 7 天（周一开始）
   const weekDays = useMemo(() => {
     const d = new Date(date);
@@ -1058,12 +1075,12 @@ function WeekView({
       days.push({
         iso: isoDate(dt),
         day: dt.getDate(),
-        weekday: WEEK_LABELS[i],
+        weekday: t(WEEK_KEYS[i]),
         month: dt.getMonth() + 1,
       });
     }
     return days;
-  }, [date]);
+  }, [date, t]);
 
   const todayIso = isoDate(new Date());
   const HOUR_START = 6;
@@ -1093,7 +1110,7 @@ function WeekView({
                 background: "var(--color-bg)", cursor: "pointer", color: "var(--color-text-muted)",
                 display: "inline-flex", alignItems: "center", justifyContent: "center",
               }}
-              aria-label="返回月视图"
+              aria-label={t("cal.backToMonth")}
             >
               <ArrowLeft size={14} />
             </button>
@@ -1150,7 +1167,7 @@ function WeekView({
                   cursor: "pointer",
                   textAlign: "center",
                 }}
-                title="点击进入 Day View"
+                title={t("cal.enterDayView")}
               >
                 <div style={{ fontSize: 10, color: "var(--color-text-muted)", marginBottom: 2 }}>
                   星期{d.weekday}
@@ -1273,7 +1290,7 @@ function WeekView({
                             opacity: e.completed ? 0.5 : 1,
                             textDecoration: e.completed ? "line-through" : "none",
                           }}
-                          title={`${e.taskName} · ${e.dueTime || "23:59"}${onMoveEvent ? "（可拖动改时间）" : ""}`}
+                          title={`${e.taskName} · ${e.dueTime || "23:59"}${onMoveEvent ? t("cal.eventDrag") : ""}`}
                         >
                           {e.dueTime} {e.taskName}
                         </button>

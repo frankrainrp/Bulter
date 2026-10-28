@@ -10,6 +10,7 @@
 import React, { useMemo } from "react";
 import { X, Trophy, Lock } from "lucide-react";
 import { ACHIEVEMENTS, getUnlockedSet, type AchievementCtx } from "@/lib/streak";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   open: boolean;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function AchievementsRoom({ open, onClose, ctx }: Props) {
+  const { t } = useT();
   // 已解锁 = 持久化记录里有 OR 当前条件已满足（双保险，避免漏弹的成就显示为锁定）
   const unlockedSet = useMemo(() => (open ? getUnlockedSet() : new Set<string>()), [open]);
   const rows = useMemo(
@@ -46,7 +48,7 @@ export default function AchievementsRoom({ open, onClose, ctx }: Props) {
       />
       <div
         role="dialog"
-        aria-label="成就收藏室"
+        aria-label={t("achv.title")}
         style={{
           position: "fixed",
           top: "50%",
@@ -89,15 +91,15 @@ export default function AchievementsRoom({ open, onClose, ctx }: Props) {
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 className="font-display" style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--color-text)" }}>
-              成就收藏室
+              {t("achv.title")}
             </h2>
             <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "2px 0 0" }}>
-              已解锁 {unlockedCount} / {rows.length}
+              {t("achv.unlocked", { n: unlockedCount, total: rows.length })}
             </p>
           </div>
           <button
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t("common.close")}
             style={{
               width: 28, height: 28, borderRadius: 6, border: "none",
               background: "transparent", cursor: "pointer", color: "var(--color-text-muted)",

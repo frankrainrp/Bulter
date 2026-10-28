@@ -10,6 +10,7 @@ import { Plus, MessageSquare } from "lucide-react";
 import type { ChatSession } from "@/lib/types";
 import { RailPrimaryBtn, RailGroupTitle, RailItem } from "./LeftRail";
 import { EmptyButlerTray } from "@/components/EmptyIllustrations";
+import { useT } from "@/lib/i18n";
 
 const RECENT_LIMIT = 12;
 
@@ -30,6 +31,7 @@ export default function ChatRail({
   onRename,
   onDelete,
 }: ChatRailProps) {
+  const { t } = useT();
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
@@ -57,7 +59,7 @@ export default function ChatRail({
             <div style={{ padding: "20px 8px", textAlign: "center", color: "var(--color-text-faint)" }}>
               {/* [068] 管家化空态：白手套呈递空托盘 */}
               <EmptyButlerTray size={120} />
-              <p style={{ fontSize: 12, margin: "8px 0 0" }}>还没有对话<br />点上方 + 开始第一个</p>
+              <p style={{ fontSize: 12, margin: "8px 0 0" }}>{t("rail.chat.empty1")}<br />{t("rail.chat.empty2")}</p>
             </div>
           )}
 
@@ -102,7 +104,7 @@ export default function ChatRail({
               <div key={s.id} style={{ position: "relative" }}>
                 <RailItem
                   icon={<MessageSquare size={14} />}
-                  label={s.title || "新对话"}
+                  label={s.title || t("rail.chat.untitled")}
                   active={isActive}
                   onClick={() => onSelect(s.id)}
                   onMenuClick={() => setMenuOpenId(menuOpenId === s.id ? null : s.id)}
@@ -128,7 +130,7 @@ export default function ChatRail({
                       }}
                     >
                       <MiniMenuBtn
-                        label="重命名"
+                        label={t("rail.chat.rename")}
                         onClick={() => {
                           setRenamingId(s.id);
                           setRenameVal(s.title);
@@ -136,10 +138,10 @@ export default function ChatRail({
                         }}
                       />
                       <MiniMenuBtn
-                        label="删除"
+                        label={t("rail.chat.delete")}
                         danger
                         onClick={() => {
-                          if (confirm(`删除会话「${s.title}」？此操作不可撤销`)) {
+                          if (confirm(t("rail.chat.deleteConfirm", { title: s.title }))) {
                             onDelete(s.id);
                           }
                           setMenuOpenId(null);

@@ -22,12 +22,15 @@ import {
   cancelSubscription,
   BILLING_EVENT,
 } from "@/lib/billing";
+import { useCredits } from "@/lib/credits";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   /** 查看全部计划 → 打开 PricingModal */
   onViewPlans: () => void;
+  /** 买积分加油包 → 打开 PricingModal（含加油包条）或直接结账 */
+  onBuyPack: () => void;
   /** 取消订阅完成 → 父组件 toast */
   onCancelled: () => void;
 }
@@ -38,10 +41,11 @@ const PLAN_ACCENT: Record<PlanId, { bg: string; fg: string; icon: React.ReactNod
   max: { bg: "var(--butler-gold)", fg: "#1c1c1e", icon: <Crown size={16} /> },
 };
 
-export default function BillingPanel({ open, onClose, onViewPlans, onCancelled }: Props) {
+export default function BillingPanel({ open, onClose, onViewPlans, onBuyPack, onCancelled }: Props) {
   const isMobile = useIsMobile();
   const { t, lang } = useT();
   const sub = useSubscription();
+  const credits = useCredits();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
 
   useEffect(() => {
@@ -160,6 +164,45 @@ export default function BillingPanel({ open, onClose, onViewPlans, onCancelled }
             </div>
           </section>
 
+          {/* 积分余额 */}
+          <Section title={t("billing.credits")}>
+            <div
+              style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "12px 14px", borderRadius: 10,
+                border: "1px solid var(--color-border)", background: "var(--color-surface)",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: 0, fontWeight: 500 }}>
+                  {t("billing.creditsBalance")}
+                </p>
+                <p className="font-display" style={{ fontSize: 24, fontWeight: 800, margin: "2px 0 4px" }}>
+                  {credits.balance}{" "}
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>
+                    {t("billing.creditsUnit")}
+                  </span>
+                </p>
+                <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: 0 }}>
+                  {t("billing.creditsMonthly", { remain: credits.monthlyRemaining, total: credits.monthlyTotal })}
+                  {" · "}
+                  {t("billing.creditsExtra", { n: credits.extraRemaining })}
+                </p>
+              </div>
+              <button
+                onClick={onBuyPack}
+                style={{
+                  flexShrink: 0, padding: "9px 14px", borderRadius: 10,
+                  border: "1px solid var(--color-primary)", background: "transparent",
+                  color: "var(--color-primary)", fontSize: 12.5, fontWeight: 600,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
+                {t("billing.buyPack")}
+              </button>
+            </div>
+          </Section>
+
           {/* 支付方式 */}
           <Section title={t("billing.paymentMethod")}>
             <div
@@ -197,7 +240,11 @@ export default function BillingPanel({ open, onClose, onViewPlans, onCancelled }
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>Butler {t(getPlanDef(inv.planId).nameKey)}</p>
+                      <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>
+                        {inv.kind === "pack"
+                          ? t("billing.invoice.pack", { credits: inv.credits ?? 0 })
+                          : `Butler ${t(getPlanDef(inv.planId).nameKey)}`}
+                      </p>
                       <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: "2px 0 0" }}>{fmtDate(inv.date)}</p>
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{CURRENCY}{inv.amount}</span>

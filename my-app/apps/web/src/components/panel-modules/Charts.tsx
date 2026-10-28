@@ -6,6 +6,7 @@
 // ============================================================
 
 import React from "react";
+import { useT } from "@/lib/i18n";
 
 export interface Series {
   label: string;
@@ -22,10 +23,11 @@ const PALETTE = [
   "var(--color-danger)",
 ];
 
-function EmptyHint({ text = "暂无数据" }: { text?: string }) {
+function EmptyHint({ text }: { text?: string }) {
+  const { t } = useT();
   return (
     <div style={{ padding: "24px 8px", textAlign: "center", fontSize: 12, color: "var(--color-text-faint)" }}>
-      {text}
+      {text ?? t("pm.noData")}
     </div>
   );
 }
@@ -147,6 +149,7 @@ export function LineChart({ data }: { data: Series[] }) {
 
 // ---------- 热力图（7 行 weekday × N 列 week，GitHub 式）----------
 export function Heatmap({ days }: { days: { date: string; count: number; weekday: number }[] }) {
+  const { t } = useT();
   if (days.length === 0) return <EmptyHint />;
   const max = Math.max(1, ...days.map((d) => d.count));
   // 切成列（每 7 天一列）
@@ -171,17 +174,17 @@ export function Heatmap({ days }: { days: { date: string; count: number; weekday
               fill={d.count === 0 ? "var(--color-border-soft)" : "var(--color-primary)"}
               fillOpacity={d.count === 0 ? 1 : intensity(d.count)}
             >
-              <title>{`${d.date}: ${d.count} 项`}</title>
+              <title>{`${d.date}: ${t("pm.itemsN", { n: d.count })}`}</title>
             </rect>
           )),
         )}
       </svg>
       <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 10, color: "var(--color-text-faint)" }}>
-        <span>少</span>
+        <span>{t("pm.less")}</span>
         {[0, 0.3, 0.6, 1].map((o, i) => (
           <span key={i} style={{ width: 11, height: 11, borderRadius: 2, background: o === 0 ? "var(--color-border-soft)" : "var(--color-primary)", opacity: o === 0 ? 1 : 0.25 + 0.75 * o }} />
         ))}
-        <span>多</span>
+        <span>{t("pm.more")}</span>
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import React, { useState } from "react";
 import { X, Sparkles, Loader2, Plus, KeyRound, Wand2, SlidersHorizontal, AlertTriangle, ArrowRight, Trash2 } from "lucide-react";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import type { DataSource, Block } from "@/lib/panel-schema";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   open: boolean;
@@ -41,6 +42,7 @@ function scanEnvKeys(src: DataSource): string[] {
 
 export default function DataSourceBuilder({ open, onClose, onInsert }: Props) {
   const isMobile = useIsMobile();
+  const { t } = useT();
   const [mode, setMode] = useState<"ai" | "manual">("ai");
   if (!open) return null;
 
@@ -49,7 +51,7 @@ export default function DataSourceBuilder({ open, onClose, onInsert }: Props) {
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "var(--color-overlay)", zIndex: 92, animation: "fade-in 0.18s ease-out" }} />
       <div
         role="dialog"
-        aria-label="数据源构建器"
+        aria-label={t("ds.aria")}
         style={{
           position: "fixed",
           ...(isMobile
@@ -62,18 +64,18 @@ export default function DataSourceBuilder({ open, onClose, onInsert }: Props) {
       >
         <header style={{ display: "flex", alignItems: "center", padding: "16px 18px 12px", flexShrink: 0 }}>
           <div style={{ flex: 1 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>🔌 添加数据源</h2>
-            <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "3px 0 0" }}>按需动态配置任意 API · 密钥用 <code style={{ fontFamily: "ui-monospace,monospace" }}>env:KEY</code> 占位（不进前端）</p>
+            <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{t("ds.title")}</h2>
+            <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "3px 0 0" }}>{t("ds.subtitleA")}<code style={{ fontFamily: "ui-monospace,monospace" }}>env:KEY</code>{t("ds.subtitleB")}</p>
           </div>
-          <button onClick={onClose} aria-label="关闭" style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "var(--color-surface)", cursor: "pointer", color: "var(--color-text-muted)", flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={onClose} aria-label={t("common.close")} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "var(--color-surface)", cursor: "pointer", color: "var(--color-text-muted)", flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
             <X size={16} />
           </button>
         </header>
 
         {/* 模式切换 */}
         <div style={{ display: "flex", gap: 6, padding: "0 18px 12px", flexShrink: 0 }}>
-          <ModeTab active={mode === "ai"} onClick={() => setMode("ai")} icon={<Wand2 size={13} />} label="AI 智能配置" />
-          <ModeTab active={mode === "manual"} onClick={() => setMode("manual")} icon={<SlidersHorizontal size={13} />} label="手动配置" />
+          <ModeTab active={mode === "ai"} onClick={() => setMode("ai")} icon={<Wand2 size={13} />} label={t("ds.mode.ai")} />
+          <ModeTab active={mode === "manual"} onClick={() => setMode("manual")} icon={<SlidersHorizontal size={13} />} label={t("ds.mode.manual")} />
         </div>
 
         <div style={{ overflowY: "auto", flex: 1, minHeight: 0, padding: "0 18px 18px" }}>
@@ -112,6 +114,7 @@ function ModeTab({ active, onClick, icon, label }: { active: boolean; onClick: (
 // AI 智能配置
 // ============================================================
 function AiMode({ onInsert }: { onInsert: (s: DataSource, b: Block[]) => void }) {
+  const { t } = useT();
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +131,7 @@ function AiMode({ onInsert }: { onInsert: (s: DataSource, b: Block[]) => void })
       });
       const json = (await res.json()) as { ok: boolean; source?: DataSource; blocks?: Block[]; error?: string };
       if (json.ok === true && json.source) setPreview({ source: json.source, blocks: json.blocks ?? [] });
-      else setError(json.error ?? "生成失败");
+      else setError(json.error ?? t("ds.genFail"));
     } catch (e) { setError((e as Error).message); }
     setLoading(false);
   };
@@ -141,7 +144,7 @@ function AiMode({ onInsert }: { onInsert: (s: DataSource, b: Block[]) => void })
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); generate(); } }}
-        placeholder="描述你要的数据（任意 API / 数据源），例如：CoinGecko 上 BTC 近 30 天价格 / 某汇率 API / GitHub 上 react 相关热门仓库 / 我司内部 orders 接口…"
+        placeholder={t("ds.aiPh")}
         rows={3}
         disabled={loading}
         style={{
@@ -152,13 +155,14 @@ function AiMode({ onInsert }: { onInsert: (s: DataSource, b: Block[]) => void })
         }}
       />
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-        {["CoinGecko BTC/ETH 现价", "USD 对各国汇率", "GitHub Top star Python 库"].map((ex) => (
-          <button key={ex} onClick={() => setPrompt(ex)} disabled={loading} style={chip}>{ex}</button>
-        ))}
+        {["ds.ex.1", "ds.ex.2", "ds.ex.3"].map((exKey) => {
+          const ex = t(exKey);
+          return <button key={exKey} onClick={() => setPrompt(ex)} disabled={loading} style={chip}>{ex}</button>;
+        })}
       </div>
       <button onClick={generate} disabled={loading || !prompt.trim()} style={{ ...primaryBtn, marginTop: 12, opacity: loading || !prompt.trim() ? 0.6 : 1 }}>
         {loading ? <Loader2 size={14} style={{ animation: "spin 0.8s linear infinite" }} /> : <Sparkles size={14} />}
-        {loading ? "AI 配置中…" : "生成数据源"}
+        {loading ? t("ds.aiConfiguring") : t("ds.genSource")}
       </button>
 
       {error && <ErrLine msg={error} />}
@@ -166,23 +170,23 @@ function AiMode({ onInsert }: { onInsert: (s: DataSource, b: Block[]) => void })
       {preview && (
         <div style={{ marginTop: 14, border: "1px solid var(--color-border)", borderRadius: 12, overflow: "hidden" }}>
           <div style={{ padding: "10px 14px", background: "var(--color-surface)", borderBottom: "1px solid var(--color-border-soft)" }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 6px" }}>配置预览</p>
-            <KvLine label="类型" value={preview.source.kind === "http" ? "HTTP API" : "内联样本数据"} />
+            <p style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: 0.4, margin: "0 0 6px" }}>{t("ds.previewLabel")}</p>
+            <KvLine label={t("ds.kv.type")} value={preview.source.kind === "http" ? t("ds.type.http") : t("ds.type.static")} />
             {preview.source.url && <KvLine label="URL" value={preview.source.url} mono />}
             {preview.source.path && <KvLine label="path" value={preview.source.path} mono />}
-            <KvLine label="展示块" value={preview.blocks.map((b) => b.type).join(" · ") || "（无）"} />
+            <KvLine label={t("ds.blocks")} value={preview.blocks.map((b) => b.type).join(" · ") || t("ds.none")} />
             {envKeys.length > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 11.5, color: "var(--color-warning)" }}>
-                <KeyRound size={12} /> 需在 .env.local 配：
+                <KeyRound size={12} /> {t("ds.envHint")}
                 {envKeys.map((k) => <code key={k} style={envChip}>{k}</code>)}
               </div>
             )}
           </div>
           <div style={{ display: "flex", gap: 8, padding: 12 }}>
             <button onClick={() => onInsert(preview.source, preview.blocks)} style={{ ...primaryBtn, flex: 1 }}>
-              <Plus size={14} /> 插入到面板
+              <Plus size={14} /> {t("ds.insert")}
             </button>
-            <button onClick={generate} style={secondaryBtn}>重新生成</button>
+            <button onClick={generate} style={secondaryBtn}>{t("ds.regen")}</button>
           </div>
         </div>
       )}
@@ -194,6 +198,7 @@ function AiMode({ onInsert }: { onInsert: (s: DataSource, b: Block[]) => void })
 // 手动配置
 // ============================================================
 function ManualMode({ onInsert }: { onInsert: (s: DataSource, b: Block[]) => void }) {
+  const { t } = useT();
   const [url, setUrl] = useState("");
   const [method, setMethod] = useState<"GET" | "POST">("GET");
   const [path, setPath] = useState("");
@@ -219,7 +224,7 @@ function ManualMode({ onInsert }: { onInsert: (s: DataSource, b: Block[]) => voi
       ...(path.trim() ? { path: path.trim() } : {}),
       ...(pivot ? { pivot: { keyName: "key", valueName: "value" } } : {}),
     };
-    const blocks: Block[] = [{ id: `${id}-tbl`, type: "table", title: "数据", sourceId: id, limit: 20 }];
+    const blocks: Block[] = [{ id: `${id}-tbl`, type: "table", title: t("ds.dataTitle"), sourceId: id, limit: 20 }];
     onInsert(source, blocks);
   };
 
@@ -233,40 +238,41 @@ function ManualMode({ onInsert }: { onInsert: (s: DataSource, b: Block[]) => voi
         <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://api.example.com/v1/items" style={inputMono} />
       </Field>
       <div style={{ display: "flex", gap: 10 }}>
-        <Field label="方法" grow={false}>
+        <Field label={t("ds.method")} grow={false}>
           <select value={method} onChange={(e) => setMethod(e.target.value as "GET" | "POST")} style={{ ...input, width: 90 }}>
             <option value="GET">GET</option>
             <option value="POST">POST</option>
           </select>
         </Field>
-        <Field label="path（响应里数组的点路径，可空）">
+        <Field label={t("ds.pathLabel")}>
           <input value={path} onChange={(e) => setPath(e.target.value)} placeholder="data.items" style={inputMono} />
         </Field>
       </div>
 
-      <KvEditor label="Query 参数" rows={query} setRows={setQuery} placeholderK="参数名" placeholderV="值" />
-      <KvEditor label="Headers（鉴权用 env:KEY，如 Authorization = Bearer env:API_TOKEN）" rows={headers} setRows={setHeaders} placeholderK="Header 名" placeholderV="值 / env:KEY" />
+      <KvEditor label={t("ds.query")} rows={query} setRows={setQuery} placeholderK={t("ds.queryK")} placeholderV={t("ds.queryV")} />
+      <KvEditor label={t("ds.headers")} rows={headers} setRows={setHeaders} placeholderK={t("ds.headerK")} placeholderV={t("ds.headerV")} />
 
       <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--color-text)", cursor: "pointer" }}>
         <input type="checkbox" checked={pivot} onChange={(e) => setPivot(e.target.checked)} style={{ accentColor: "var(--color-primary)" }} />
-        响应是「键值对象」→ 透视成行（如汇率 {`{EUR:0.9}`} → 表格）
+        {t("ds.pivotLabel")}
       </label>
 
       {envKeys.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--color-warning)", flexWrap: "wrap" }}>
-          <KeyRound size={12} /> 需在 apps/web/.env.local 配：
+          <KeyRound size={12} /> {t("ds.envHint2")}
           {envKeys.map((k) => <code key={k} style={envChip}>{k}</code>)}
         </div>
       )}
 
       <button onClick={add} disabled={!canAdd} style={{ ...primaryBtn, opacity: canAdd ? 1 : 0.6, marginTop: 2 }}>
-        <ArrowRight size={14} /> 添加到面板
+        <ArrowRight size={14} /> {t("ds.addToPanel")}
       </button>
     </div>
   );
 }
 
 function KvEditor({ label, rows, setRows, placeholderK, placeholderV }: { label: string; rows: KV[]; setRows: (r: KV[]) => void; placeholderK: string; placeholderV: string }) {
+  const { t } = useT();
   const update = (i: number, patch: Partial<KV>) => setRows(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   const remove = (i: number) => setRows(rows.length > 1 ? rows.filter((_, idx) => idx !== i) : [{ k: "", v: "" }]);
   const add = () => setRows([...rows, { k: "", v: "" }]);
@@ -278,14 +284,14 @@ function KvEditor({ label, rows, setRows, placeholderK, placeholderV }: { label:
           <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <input value={r.k} onChange={(e) => update(i, { k: e.target.value })} placeholder={placeholderK} style={{ ...inputMono, flex: 1 }} />
             <input value={r.v} onChange={(e) => update(i, { v: e.target.value })} placeholder={placeholderV} style={{ ...inputMono, flex: 1.4 }} />
-            <button onClick={() => remove(i)} aria-label="删除" style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 7, border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-faint)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <button onClick={() => remove(i)} aria-label={t("ds.remove")} style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 7, border: "1px solid var(--color-border)", background: "var(--color-bg)", color: "var(--color-text-faint)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
               <Trash2 size={12} />
             </button>
           </div>
         ))}
       </div>
       <button onClick={add} style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 7, border: "1px dashed var(--color-border)", background: "transparent", color: "var(--color-text-muted)", fontSize: 11.5, cursor: "pointer", fontFamily: "inherit" }}>
-        <Plus size={11} /> 加一行
+        <Plus size={11} /> {t("ds.addRow")}
       </button>
     </div>
   );

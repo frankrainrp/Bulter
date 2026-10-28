@@ -6,6 +6,7 @@
 // ============================================================
 
 import { OpenAI } from "openai";
+import { clampText, INPUT_LIMITS, rateLimited, safeError } from "@/lib/api-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,12 +21,14 @@ const SYSTEM = `你是调研负责人。把用户的复杂调研目标拆成 3-4
 {"title":"半导体潜力股","emoji":"💹","squads":[{"title":"上游材料","question":"半导体上游(硅片/光刻胶/电子特气)有哪些代表公司及其潜力评级?"},{"title":"中游制造","question":"晶圆代工/封测环节代表公司、产能与成长性如何?"},{"title":"下游应用","question":"AI芯片/汽车电子等下游需求最强的公司及驱动因素?"},{"title":"风险面","question":"该产业链主要风险(地缘/周期/技术替代)有哪些?"}]}`;
 
 export async function POST(req: Request) {
+  const limited = rateLimited(req); // SEC-05
+  if (limited) return limited;
   let goal = "";
-  try { goal = ((await req.json())?.goal ?? "").trim(); } catch { /* */ }
+  try { goal = clampText(((await req.json())?.goal ?? "").trim(), INPUT_LIMITS.maxPromptChars); } catch { /* */ }
   if (!goal) return Response.json({ ok: false, error: "缺少 goal" }, { status: 400 });
   if (!process.env.DEEPSEEK_API_KEY) return Response.json({ ok: false, error: "未配置 DEEPSEEK_API_KEY" }, { status: 500 });
 
-  const openai = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1" });
+  const openai = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: "https://api.deepseek.com" });
   try {
     const c = await openai.chat.completions.create({
       model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
@@ -48,6 +51,6 @@ export async function POST(req: Request) {
       usage: c.usage,
     });
   } catch (err) {
-    return Response.json({ ok: false, error: (err as Error).message }, { status: 200 });
+    return Response.json({ ok: false, error: safeError(err, "调研拆解失败，请稍后重试") }, { status: 200 });
   }
 }

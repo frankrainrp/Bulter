@@ -19,6 +19,7 @@ import ModuleRenderer from "./panel-modules/ModuleRenderer";
 import type { PanelDataCtx } from "@/lib/panel-data";
 import GeneratedPanelView from "./GeneratedPanelView";
 import { SAMPLE_SPEC, type GeneratedPanelSpec } from "@/lib/panel-schema";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   panel: CustomPanel;
@@ -28,14 +29,14 @@ interface Props {
   dataCtx: PanelDataCtx;
 }
 
-// [064] 加模组菜单：每项给一个带 live 默认配置的模组
-const MODULE_PRESETS: { type: PanelModuleType; label: string; icon: React.ReactNode; make: () => PanelModule }[] = [
-  { type: "stat", label: "统计卡", icon: <Hash size={13} />, make: () => ({ id: mid(), type: "stat", title: "待办任务", config: { metric: "tasks-active" } }) },
-  { type: "countdown", label: "倒计时", icon: <Timer size={13} />, make: () => ({ id: mid(), type: "countdown", title: "最近截止", config: {} }) },
-  { type: "tasklist", label: "任务清单", icon: <ListChecks size={13} />, make: () => ({ id: mid(), type: "tasklist", title: "进行中", config: { filter: "active", limit: 6 } }) },
-  { type: "pie", label: "饼图", icon: <PieIcon size={13} />, make: () => ({ id: mid(), type: "pie", title: "任务状态分布", config: { metric: "tasks-by-status" } }) },
-  { type: "bar", label: "柱状图", icon: <BarChart3 size={13} />, make: () => ({ id: mid(), type: "bar", title: "近 7 日到期", config: { metric: "completion-7d" } }) },
-  { type: "heatmap", label: "热力图", icon: <Grid3x3 size={13} />, make: () => ({ id: mid(), type: "heatmap", title: "任务热力图", config: {} }) },
+// [064] 加模组菜单：每项给一个带 live 默认配置的模组（文案走 i18n key）
+const MODULE_PRESETS: { type: PanelModuleType; labelKey: string; titleKey: string; icon: React.ReactNode; make: (title: string) => PanelModule }[] = [
+  { type: "stat", labelKey: "pm.mod.stat", titleKey: "pm.title.tasksActive", icon: <Hash size={13} />, make: (title) => ({ id: mid(), type: "stat", title, config: { metric: "tasks-active" } }) },
+  { type: "countdown", labelKey: "pm.mod.countdown", titleKey: "pm.title.nearDue", icon: <Timer size={13} />, make: (title) => ({ id: mid(), type: "countdown", title, config: {} }) },
+  { type: "tasklist", labelKey: "pm.mod.tasklist", titleKey: "pm.title.inProgress", icon: <ListChecks size={13} />, make: (title) => ({ id: mid(), type: "tasklist", title, config: { filter: "active", limit: 6 } }) },
+  { type: "pie", labelKey: "pm.mod.pie", titleKey: "pm.title.statusDist", icon: <PieIcon size={13} />, make: (title) => ({ id: mid(), type: "pie", title, config: { metric: "tasks-by-status" } }) },
+  { type: "bar", labelKey: "pm.mod.bar", titleKey: "pm.title.due7", icon: <BarChart3 size={13} />, make: (title) => ({ id: mid(), type: "bar", title, config: { metric: "completion-7d" } }) },
+  { type: "heatmap", labelKey: "pm.mod.heatmap", titleKey: "pm.title.heatmap", icon: <Grid3x3 size={13} />, make: (title) => ({ id: mid(), type: "heatmap", title, config: {} }) },
 ];
 
 function mid(): string {
@@ -70,6 +71,7 @@ function KindBtn({ active, onClick, icon, label }: { active: boolean; onClick: (
 type PanelPatch = Partial<Pick<CustomPanel, "label" | "emoji" | "content" | "kind" | "url" | "modules" | "spec">>;
 
 export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: Props) {
+  const { t } = useT();
   const kind: CustomPanelKind = panel.kind ?? "markdown";
   const [content, setContent] = useState(panel.content);
   const [label, setLabel] = useState(panel.label);
@@ -148,7 +150,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
   };
 
   const handleDelete = () => {
-    if (confirm(`确定删除面板「${panel.label}」？此操作不可撤销。`)) {
+    if (confirm(t("cpv.deleteConfirm", { label: panel.label }))) {
       // 删除时丢弃所有 pending 修改
       if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
       pendingPatchRef.current = {};
@@ -198,7 +200,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
           }}
           onFocus={(e) => ((e.currentTarget.style.border = "1px solid var(--color-border)"))}
           onBlur={(e) => ((e.currentTarget.style.border = "1px solid transparent"))}
-          title="面板 emoji（最多 3 字符，兼容旗帜/ZWJ emoji）"
+          title={t("cpv.emojiTitle")}
         />
         <input
           value={label}
@@ -207,7 +209,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
             setLabel(v);
             scheduleSave({ label: v });
           }}
-          placeholder="面板名…"
+          placeholder={t("cpv.namePh")}
           maxLength={12}
           style={{
             flex: 1,
@@ -228,7 +230,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
         {/* [054] D.2 类型切换 markdown / iframe */}
         <div
           role="group"
-          aria-label="面板类型"
+          aria-label={t("cpv.kindAria")}
           style={{
             display: "inline-flex",
             border: "1px solid var(--color-border)",
@@ -240,25 +242,25 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
             active={kind === "markdown"}
             onClick={() => onUpdate(panel.id, { kind: "markdown" })}
             icon={<FileText size={12} />}
-            label="笔记"
+            label={t("cpv.kind.note")}
           />
           <KindBtn
             active={kind === "iframe"}
             onClick={() => onUpdate(panel.id, { kind: "iframe" })}
             icon={<Globe size={12} />}
-            label="网页"
+            label={t("cpv.kind.web")}
           />
           <KindBtn
             active={kind === "modules"}
             onClick={() => onUpdate(panel.id, { kind: "modules" })}
             icon={<LayoutGrid size={12} />}
-            label="模组"
+            label={t("cpv.kind.module")}
           />
           <KindBtn
             active={kind === "generated"}
             onClick={() => onUpdate(panel.id, { kind: "generated", ...(panel.spec ? {} : { spec: SAMPLE_SPEC }) })}
             icon={<Boxes size={12} />}
-            label="应用"
+            label={t("cpv.kind.app")}
           />
         </div>
 
@@ -266,7 +268,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
         {kind === "markdown" && (
           <button
             onClick={() => setMode((m) => (m === "edit" ? "preview" : "edit"))}
-            title={mode === "edit" ? "切到预览" : "切到编辑"}
+            title={mode === "edit" ? t("notes.toPreview") : t("notes.toEdit")}
             style={{
               display: "inline-flex", alignItems: "center", gap: 5,
               padding: "6px 10px", borderRadius: 6,
@@ -277,13 +279,13 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
               fontFamily: "inherit",
             }}
           >
-            {mode === "edit" ? <><Eye size={12} /> 预览</> : <><Edit3 size={12} /> 编辑</>}
+            {mode === "edit" ? <><Eye size={12} /> {t("cpv.preview")}</> : <><Edit3 size={12} /> {t("cpv.edit")}</>}
           </button>
         )}
         <button
           onClick={handleDelete}
-          title="删除面板"
-          aria-label="删除面板"
+          title={t("cpv.deletePanel")}
+          aria-label={t("cpv.deletePanel")}
           style={{
             width: 30, height: 30, borderRadius: 6,
             border: "1px solid var(--color-border)",
@@ -334,7 +336,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
                 onUpdateRef.current(panel.id, { url: v });
               }
             }}
-            placeholder="https://example.com（支持 https/http）"
+            placeholder={t("cpv.urlPh")}
             style={{
               flex: 1, border: "1px solid var(--color-border)",
               borderRadius: 6, padding: "5px 9px",
@@ -392,7 +394,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
                   {MODULE_PRESETS.map((p) => (
                     <button
                       key={p.type}
-                      onClick={() => addModule(p.make())}
+                      onClick={() => addModule(p.make(t(p.titleKey)))}
                       style={{
                         display: "inline-flex", alignItems: "center", gap: 7,
                         padding: "8px 10px", borderRadius: 8, border: "none",
@@ -403,7 +405,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
                       onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "transparent")}
                     >
                       <span style={{ color: "var(--color-primary)", display: "inline-flex" }}>{p.icon}</span>
-                      {p.label}
+                      {t(p.labelKey)}
                     </button>
                   ))}
                 </div>
@@ -418,7 +420,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
                 border: "1px dashed var(--color-border)", borderRadius: "var(--radius-card)",
               }}>
                 <LayoutGrid size={40} />
-                <p style={{ fontSize: 13, margin: 0 }}>空白仪表盘 — 点「加模组」拼装，或让 Butler 帮你组合</p>
+                <p style={{ fontSize: 13, margin: 0 }}>{t("cpv.emptyModules")}</p>
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
@@ -433,7 +435,9 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
             <iframe
               src={normalizeUrl(url)}
               title={panel.label}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+              // SEC-06：去掉 allow-popups-to-escape-sandbox（真正危险：放任弹窗脱离沙箱）。
+              // 保留嵌入仪表盘所需的 scripts/same-origin/forms/popups（外部源天然与本应用跨源隔离）。
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               referrerPolicy="no-referrer"
               style={{
                 width: "100%", height: "100%", border: "none",
@@ -447,7 +451,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
               padding: 32, textAlign: "center",
             }}>
               <Globe size={40} />
-              <p style={{ fontSize: 13, margin: 0 }}>填上方 URL 即可嵌入网页</p>
+              <p style={{ fontSize: 13, margin: 0 }}>{t("cpv.emptyIframe")}</p>
               <p style={{ fontSize: 11, margin: 0, display: "inline-flex", alignItems: "center", gap: 5, color: "var(--color-warning)" }}>
                 <AlertTriangle size={11} /> 多数大型站点设置了 X-Frame-Options 会拒绝嵌入
               </p>
@@ -460,7 +464,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
               setContent(e.target.value);
               scheduleSave({ content: e.target.value });
             }}
-            placeholder="支持 Markdown：# 标题、- 列表、**加粗**、`code`、表格…"
+            placeholder={t("cpv.mdPh")}
             style={{
               width: "100%",
               minHeight: "100%",
@@ -485,7 +489,7 @@ export default function CustomPanelView({ panel, onUpdate, onDelete, dataCtx }: 
           }}>
             {/* [056] 插画替代 icon */}
             <EmptyPanel size={150} />
-            <p style={{ fontSize: 13, margin: 0 }}>面板还没内容，点击右上「编辑」开始写</p>
+            <p style={{ fontSize: 13, margin: 0 }}>{t("cpv.emptyContent")}</p>
           </div>
         )}
       </div>

@@ -13,6 +13,7 @@
 import React from "react";
 import { CalendarDays, Clock, Flame } from "lucide-react";
 import type { DdlItem } from "@/lib/types";
+import { useT, type TFunc } from "@/lib/i18n";
 
 interface Props {
   ddls: DdlItem[];
@@ -24,26 +25,25 @@ interface Props {
   bestHourLabel?: string | null;
 }
 
-const WEEKDAY = ["日", "一", "二", "三", "四", "五", "六"];
-
 function effStatus(d: DdlItem): "todo" | "in_progress" | "done" {
   return d.status ?? (d.completed ? "done" : "todo");
 }
 
-function urgencyMeta(daysLeft: number): { color: string; label: string; bg: string } {
-  if (daysLeft < 0) return { color: "var(--color-danger)", bg: "rgba(220,38,38,0.10)", label: "已逾期" };
-  if (daysLeft < 1) return { color: "var(--color-danger)", bg: "rgba(220,38,38,0.10)", label: "今日截止" };
-  if (daysLeft < 3) return { color: "#ea580c",            bg: "rgba(234,88,12,0.10)",  label: `${Math.ceil(daysLeft)} 天内` };
-  if (daysLeft < 7) return { color: "var(--color-warning)", bg: "rgba(245,158,11,0.10)", label: `${Math.ceil(daysLeft)} 天内` };
-  return { color: "var(--color-success)", bg: "rgba(45,122,77,0.10)", label: `${Math.ceil(daysLeft)} 天后` };
+function urgencyMeta(daysLeft: number, t: TFunc): { color: string; label: string; bg: string } {
+  if (daysLeft < 0) return { color: "var(--color-danger)", bg: "rgba(220,38,38,0.10)", label: t("th.overdue") };
+  if (daysLeft < 1) return { color: "var(--color-danger)", bg: "rgba(220,38,38,0.10)", label: t("tasks.urgency.today") };
+  if (daysLeft < 3) return { color: "#ea580c",            bg: "rgba(234,88,12,0.10)",  label: t("th.within", { n: Math.ceil(daysLeft) }) };
+  if (daysLeft < 7) return { color: "var(--color-warning)", bg: "rgba(245,158,11,0.10)", label: t("th.within", { n: Math.ceil(daysLeft) }) };
+  return { color: "var(--color-success)", bg: "rgba(45,122,77,0.10)", label: t("th.after", { n: Math.ceil(daysLeft) }) };
 }
 
 export default function TodayHero({ ddls, onJumpToTask, streakDays = 0, bestHourLabel }: Props) {
+  const { t } = useT();
   const now = new Date();
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
   const isoToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const weekday = WEEKDAY[now.getDay()];
+  const weekday = t(`cal.dow.${now.getDay()}`);
 
   const todo = ddls.filter((d) => effStatus(d) !== "done");
   const done = ddls.filter((d) => effStatus(d) === "done");
@@ -77,7 +77,7 @@ export default function TodayHero({ ddls, onJumpToTask, streakDays = 0, bestHour
   const daysLeft = nextDeadline
     ? (nextDeadline.ts - today.getTime()) / (24 * 3600 * 1000)
     : null;
-  const urgent = daysLeft !== null ? urgencyMeta(daysLeft) : null;
+  const urgent = daysLeft !== null ? urgencyMeta(daysLeft, t) : null;
 
   return (
     <div
@@ -101,11 +101,11 @@ export default function TodayHero({ ddls, onJumpToTask, streakDays = 0, bestHour
           {isoToday}
         </span>
         <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-          星期{weekday}
+          {weekday}
         </span>
         {streakDays > 0 && (
           <span
-            title={`连续打开 ${streakDays} 天`}
+            title={t("db.streakTitle", { n: streakDays })}
             style={{
               marginLeft: "auto",
               display: "inline-flex",
@@ -119,12 +119,12 @@ export default function TodayHero({ ddls, onJumpToTask, streakDays = 0, bestHour
               color: "var(--color-warning)",
             }}
           >
-            <Flame size={11} /> {streakDays} 天 streak
+            <Flame size={11} /> {t("th.streak", { n: streakDays })}
           </span>
         )}
         {bestHourLabel && (
           <span
-            title="基于你的活跃数据本地分析"
+            title={t("th.bestHourTitle")}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -138,16 +138,16 @@ export default function TodayHero({ ddls, onJumpToTask, streakDays = 0, bestHour
               marginLeft: streakDays > 0 ? 0 : "auto",
             }}
           >
-            ⚡ 你 {bestHourLabel} 最高效
+            {t("th.bestHour", { label: bestHourLabel })}
           </span>
         )}
       </div>
 
       {/* 中部:3 个统计 chip + 环形完成率 */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <StatChip label="今日截止" value={todayCount} accent={todayCount > 0 ? "var(--color-danger)" : undefined} />
-        <StatChip label="本周待办" value={weekCount} />
-        <StatChip label="累计完成" value={done.length} accent="var(--color-success)" />
+        <StatChip label={t("tasks.urgency.today")} value={todayCount} accent={todayCount > 0 ? "var(--color-danger)" : undefined} />
+        <StatChip label={t("th.weekTodo")} value={weekCount} />
+        <StatChip label={t("th.totalDone")} value={done.length} accent="var(--color-success)" />
         <div style={{ marginLeft: "auto" }}>
           <RingProgress ratio={weekRatio} />
         </div>
@@ -215,7 +215,7 @@ export default function TodayHero({ ddls, onJumpToTask, streakDays = 0, bestHour
             textAlign: "center",
           }}
         >
-          🎉 暂无近期 deadline,继续保持
+          {t("th.noDeadline")}
         </div>
       )}
     </div>

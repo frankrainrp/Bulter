@@ -14,6 +14,7 @@ import { Play, Pause, RotateCcw, Target, Link2 } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { playSound } from "@/lib/sound";
 import type { DdlItem } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 const PRESETS = [
   { label: "25 min", min: 25 },
@@ -30,6 +31,7 @@ interface Props {
 
 export default function FocusTimer({ ddls = [], onAppendTaskNote }: Props) {
   const toast = useToast();
+  const { t } = useT();
   const [totalSec, setTotalSec] = useState(25 * 60);  // 总时长
   const [remainSec, setRemainSec] = useState(25 * 60); // 剩余秒
   const [running, setRunning] = useState(false);
@@ -54,13 +56,13 @@ export default function FocusTimer({ ddls = [], onAppendTaskNote }: Props) {
           setRunning(false);
           playSound("focus-end"); // [056]
           // 用 Toast 替代 alert（Phase 3 接 Tauri 后升级原生通知）
-          toast.success("🎉 专注时段结束,记得休息一下!", { duration: 8000 });
+          toast.success(t("focus.done"), { duration: 8000 });
           // Epic 5.1 把这次专注追加到关联任务的 notes
           const tid = linkedRef.current;
           if (tid && onAppendTaskNote) {
             const min = Math.round(totalSecRef.current / 60);
             const stamp = new Date().toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit", month: "2-digit", day: "2-digit" });
-            onAppendTaskNote(tid, `- 专注 ${min} min  ·  ${stamp}`);
+            onAppendTaskNote(tid, t("focus.noteLine", { min, stamp }));
           }
           return 0;
         }
@@ -180,7 +182,7 @@ export default function FocusTimer({ ddls = [], onAppendTaskNote }: Props) {
               margin: "6px 0 0",
             }}
           >
-            {running ? "专注中..." : remainSec === 0 ? "完成 🎉" : "准备开始"}
+            {running ? t("focus.running") : remainSec === 0 ? t("focus.finished") : t("focus.ready")}
           </p>
         </div>
       </div>
@@ -215,7 +217,7 @@ export default function FocusTimer({ ddls = [], onAppendTaskNote }: Props) {
               gap: 4,
             }}
           >
-            <Link2 size={10} /> 关联任务（结束自动记录到任务备注）
+            <Link2 size={10} /> {t("focus.linkTask")}
           </label>
           <select
             value={linkedTaskId ?? ""}
@@ -233,10 +235,10 @@ export default function FocusTimer({ ddls = [], onAppendTaskNote }: Props) {
               outline: "none",
             }}
           >
-            <option value="">— 不关联任务 —</option>
-            {todoTasks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.taskName}
+            <option value="">{t("focus.noLink")}</option>
+            {todoTasks.map((task) => (
+              <option key={task.id} value={task.id}>
+                {task.taskName}
               </option>
             ))}
           </select>
@@ -279,7 +281,7 @@ export default function FocusTimer({ ddls = [], onAppendTaskNote }: Props) {
           lineHeight: 1.5,
         }}
       >
-        Phase 3 桌面壳后会接入<br />系统通知 + 后台保活
+        {t("focus.phaseHint")}
       </p>
     </div>
   );

@@ -22,13 +22,18 @@ import {
   chargeTotal,
   detectCardBrand,
 } from "@/lib/billing";
+import { getPack } from "@/lib/credits";
+
+/** 结账商品：订阅档（plan+cycle）或积分加油包（一次性） */
+export type CheckoutProduct =
+  | { kind: "plan"; plan: PlanId; cycle: BillingCycle }
+  | { kind: "pack"; packId: string };
 
 interface Props {
   open: boolean;
-  plan: PlanId;
-  cycle: BillingCycle;
+  product: CheckoutProduct | null;
   onClose: () => void;
-  /** 模拟支付成功 → 父组件 subscribeTo + toast */
+  /** 模拟支付成功 → 父组件 subscribeTo / purchasePack + toast */
   onConfirmed: (card: CardInfo) => void;
 }
 
@@ -44,7 +49,7 @@ function formatExpiry(raw: string): string {
   return `${digits.slice(0, 2)}/${digits.slice(2)}`;
 }
 
-export default function CheckoutModal({ open, plan, cycle, onClose, onConfirmed }: Props) {
+export default function CheckoutModal({ open, product, onClose, onConfirmed }: Props) {
   const isMobile = useIsMobile();
   const { t } = useT();
   const [phase, setPhase] = useState<Phase>("form");
@@ -54,10 +59,12 @@ export default function CheckoutModal({ open, plan, cycle, onClose, onConfirmed 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
-  if (!open) return null;
+  if (!open || !product) return null;
 
-  const def = getPlanDef(plan);
-  const total = chargeTotal(plan, cycle);
+  const isPack = product.kind === "pack";
+  const pack = isPack ? getPack(product.packId) : undefined;
+  const def = product.kind === "plan" ? getPlanDef(product.plan) : null;
+  const total = product.kind === "plan" ? chargeTotal(product.plan, product.cycle) : pack?.price ?? 0;
   const brand = detectCardBrand(cardNumber);
   const digits = cardNumber.replace(/\D/g, "");
   const canPay = digits.length >= 12 && expiry.length === 5 && cvc.length >= 3 && name.trim().length > 0;
@@ -85,7 +92,10 @@ export default function CheckoutModal({ open, plan, cycle, onClose, onConfirmed 
     onClose();
   };
 
-  const cycleLabel = t(cycle === "annual" ? "pricing.annual" : "pricing.monthly");
+  const cycleLabel =
+    product.kind === "plan"
+      ? t(product.cycle === "annual" ? "pricing.annual" : "pricing.monthly")
+      : t("checkout.oneTime");
 
   return (
     <>
@@ -144,9 +154,13 @@ export default function CheckoutModal({ open, plan, cycle, onClose, onConfirmed 
             <div style={{ animation: "pay-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)" }}>
               <CheckCircle2 size={64} color="var(--color-success)" strokeWidth={1.6} />
             </div>
-            <h3 style={{ fontSize: 19, fontWeight: 700, margin: 0 }}>{t("checkout.success")}</h3>
+            <h3 style={{ fontSize: 19, fontWeight: 700, margin: 0 }}>
+              {t(isPack ? "checkout.packSuccess" : "checkout.success")}
+            </h3>
             <p style={{ fontSize: 13, color: "var(--color-text-muted)", margin: 0, maxWidth: 300 }}>
-              {t("checkout.successDesc", { plan: def.nameKey ? t(def.nameKey) : plan })}
+              {isPack
+                ? t("checkout.packSuccessDesc", { credits: pack?.credits ?? 0 })
+                : t("checkout.successDesc", { plan: def ? t(def.nameKey) : "" })}
             </p>
             <button
               onClick={reset}
@@ -185,7 +199,10 @@ export default function CheckoutModal({ open, plan, cycle, onClose, onConfirmed 
               <p style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 8px" }}>
                 {t("checkout.orderSummary")}
               </p>
-              <Row label={t("checkout.plan")} value={`Butler ${t(def.nameKey)}`} />
+              <Row
+                label={t(isPack ? "checkout.item" : "checkout.plan")}
+                value={isPack ? t("checkout.packItem", { credits: pack?.credits ?? 0 }) : `Butler ${def ? t(def.nameKey) : ""}`}
+              />
               <Row label={t("checkout.billing")} value={cycleLabel} />
               <div style={{ height: 1, background: "var(--color-border-soft)", margin: "8px 0" }} />
               <Row label={t("checkout.total")} value={`${CURRENCY}${total}`} bold />

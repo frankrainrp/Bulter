@@ -6,11 +6,12 @@
 // ============================================================
 
 import React, { useState } from "react";
-import { ChevronDown, User as UserIcon, CreditCard, LayoutGrid, Settings, Plus, Trophy, Crown } from "lucide-react";
+import { ChevronDown, User as UserIcon, CreditCard, LayoutGrid, Settings, Plus, Trophy, Crown, LogOut } from "lucide-react";
 import type { NavId, DdlItem, Note, ChatMessage, CustomPanel } from "@/lib/types";
 import GlobalSearch from "./GlobalSearch";
 import { useT } from "@/lib/i18n";
 import { useCurrentPlan, getPlanDef } from "@/lib/billing";
+import { useAuthProfile } from "@/components/AuthGate";
 
 const DEFAULT_TAB_ORDER: NavId[] = ["chat", "tasks", "calendar", "notes"];
 
@@ -59,6 +60,7 @@ export default function TopBar({
   isMobile = false, onOpenBilling, onUpgrade,
 }: TopBarProps) {
   const { t } = useT();
+  const authProfile = useAuthProfile();
   const plan = useCurrentPlan();
   const isPaid = plan !== "free";
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -155,7 +157,7 @@ export default function TopBar({
                 setDragOverId(null);
                 if (sourceId && sourceId !== id) handleDropTab(sourceId, id);
               }}
-              title="点击切换，拖拽重排"
+              title={t("topbar.tabReorder")}
               className={isActive ? "pill-nav-item active" : "pill-nav-item"}
               style={isDragOver ? { boxShadow: "inset 0 0 0 2px var(--color-primary)" } : undefined}
             >
@@ -244,15 +246,20 @@ export default function TopBar({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "white",
+                overflow: "hidden",
               }}
             >
-              <UserIcon size={14} />
+              {authProfile.imageUrl ? (
+                <img src={authProfile.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <UserIcon size={14} />
+              )}
             </div>
             {!isMobile && (
               <>
                 <div style={{ textAlign: "left", lineHeight: 1.2 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text)" }}>Feng</div>
-                  <div style={{ fontSize: 11, color: "var(--color-text-muted)" }}>feng@example.com</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text)" }}>{authProfile.name}</div>
+                  <div style={{ fontSize: 11, color: "var(--color-text-muted)" }}>{authProfile.email}</div>
                 </div>
                 <ChevronDown size={14} color="var(--color-text-muted)" />
               </>
@@ -281,7 +288,7 @@ export default function TopBar({
               >
                 <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-soft)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>Feng</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>{authProfile.name}</p>
                     <span
                       style={{
                         display: "inline-flex", alignItems: "center", gap: 3,
@@ -295,7 +302,7 @@ export default function TopBar({
                     </span>
                   </div>
                   <p style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 2 }}>
-                    feng@example.com
+                    {authProfile.email}
                   </p>
                 </div>
                 {/* 升级 CTA（免费用户）*/}
@@ -328,6 +335,14 @@ export default function TopBar({
                   label={t("topbar.billing")}
                   onClick={() => { setShowUserMenu(false); onOpenBilling?.(); }}
                 />
+                {authProfile.signOut && (
+                  <MenuBtn
+                    icon={<LogOut size={14} />}
+                    label={t("topbar.logout")}
+                    danger
+                    onClick={() => { setShowUserMenu(false); authProfile.signOut?.(); }}
+                  />
+                )}
               </div>
             </>
           )}

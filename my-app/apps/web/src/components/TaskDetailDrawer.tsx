@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { DdlItem, DdlAttachment, TaskStatus, TaskPriority, Note } from "@/lib/types";
 import { useIsMobile } from "@/lib/use-is-mobile";
+import { useT, type TFunc } from "@/lib/i18n";
 
 export type EditingTarget =
   | { mode: "create"; presetDate?: string; presetTime?: string }
@@ -55,50 +56,31 @@ interface Props {
   onUnlinkNote?: (taskId: string) => void;
 }
 
-const STATUS_OPTIONS: { v: TaskStatus; label: string; color: string }[] = [
-  { v: "todo", label: "待办", color: "var(--color-text-muted)" },
-  { v: "in_progress", label: "进行中", color: "var(--color-warning)" },
-  { v: "done", label: "已完成", color: "var(--color-success)" },
+const STATUS_OPTIONS: { v: TaskStatus; labelKey: string; color: string }[] = [
+  { v: "todo", labelKey: "td.status.todo", color: "var(--color-text-muted)" },
+  { v: "in_progress", labelKey: "td.status.inProgress", color: "var(--color-warning)" },
+  { v: "done", labelKey: "td.status.done", color: "var(--color-success)" },
 ];
 
-const PRIORITY_OPTIONS: { v: TaskPriority; label: string; color: string }[] = [
-  { v: "low", label: "低", color: "var(--color-info)" },
-  { v: "med", label: "中", color: "var(--color-warning)" },
-  { v: "high", label: "高", color: "var(--color-danger)" },
+const PRIORITY_OPTIONS: { v: TaskPriority; labelKey: string; color: string }[] = [
+  { v: "low", labelKey: "tasks.priority.low", color: "var(--color-info)" },
+  { v: "med", labelKey: "tasks.priority.med", color: "var(--color-warning)" },
+  { v: "high", labelKey: "tasks.priority.high", color: "var(--color-danger)" },
 ];
 
-// Epic 5.3 任务快捷模板:常用学生场景一键预填
+// Epic 5.3 任务快捷模板:常用学生场景一键预填（description 走 i18n descKey）
 interface TaskTemplate {
   id: string;
   label: string;
   emoji: string;
+  descKey: string;
   patch: () => Partial<FormPayload>;
 }
 const TASK_TEMPLATES: TaskTemplate[] = [
-  {
-    id: "quiz",
-    label: "Quiz",
-    emoji: "📝",
-    patch: () => ({ weight: 10, priority: "med",  tags: ["quiz"], description: "复习考点 + 1 套模拟" }),
-  },
-  {
-    id: "paper",
-    label: "Paper",
-    emoji: "📄",
-    patch: () => ({ weight: 30, priority: "high", tags: ["paper"], description: "提纲 → 初稿 → 润色 → 提交" }),
-  },
-  {
-    id: "project",
-    label: "Project",
-    emoji: "🚀",
-    patch: () => ({ weight: 25, priority: "high", tags: ["project"], description: "拆任务,分工(若小组)", isGroupWork: true }),
-  },
-  {
-    id: "reading",
-    label: "Reading",
-    emoji: "📖",
-    patch: () => ({ weight: null, priority: "low",  tags: ["reading"], description: "记笔记 + 关键结论 3 句" }),
-  },
+  { id: "quiz", label: "Quiz", emoji: "📝", descKey: "td.tpl.quiz.desc", patch: () => ({ weight: 10, priority: "med", tags: ["quiz"] }) },
+  { id: "paper", label: "Paper", emoji: "📄", descKey: "td.tpl.paper.desc", patch: () => ({ weight: 30, priority: "high", tags: ["paper"] }) },
+  { id: "project", label: "Project", emoji: "🚀", descKey: "td.tpl.project.desc", patch: () => ({ weight: 25, priority: "high", tags: ["project"], isGroupWork: true }) },
+  { id: "reading", label: "Reading", emoji: "📖", descKey: "td.tpl.reading.desc", patch: () => ({ weight: null, priority: "low", tags: ["reading"] }) },
 ];
 
 export default function TaskDetailDrawer({
@@ -113,6 +95,7 @@ export default function TaskDetailDrawer({
     : (target.mode === "create" && target.presetTime) || "23:59";
 
   const isMobile = useIsMobile();
+  const { t } = useT();
   const [taskName, setTaskName] = useState(init?.taskName ?? "");
   const [dueDate, setDueDate] = useState(initialDate);
   const [dueTime, setDueTime] = useState(initialTime);
@@ -222,12 +205,12 @@ export default function TaskDetailDrawer({
             }}
           >
             <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)", margin: 0 }}>
-              {isEdit ? "Task Details" : "New Task"}
+              {isEdit ? t("td.title.edit") : t("td.title.create")}
             </h2>
             <button
               type="button"
               onClick={onCancel}
-              aria-label="关闭"
+              aria-label={t("td.close")}
               style={{
                 width: 28, height: 28, borderRadius: 6, border: "none",
                 background: "transparent", cursor: "pointer", color: "var(--color-text-muted)",
@@ -251,7 +234,7 @@ export default function TaskDetailDrawer({
                     letterSpacing: 0.4, display: "block", marginBottom: 6,
                   }}
                 >
-                  快捷模板
+                  {t("td.tpl.label")}
                 </span>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {TASK_TEMPLATES.map((tpl) => (
@@ -263,7 +246,7 @@ export default function TaskDetailDrawer({
                         if (p.weight !== undefined) setWeight(p.weight === null ? "" : String(p.weight));
                         if (p.priority !== undefined) setPriority((p.priority as TaskPriority) ?? "");
                         if (p.tags !== undefined) setTagsInput((p.tags ?? []).join(", "));
-                        if (p.description !== undefined) setDescription(p.description ?? "");
+                        setDescription(t(tpl.descKey));
                         if (p.isGroupWork !== undefined) setIsGroupWork(!!p.isGroupWork);
                         if (!taskName) nameRef.current?.focus();
                       }}
@@ -299,24 +282,24 @@ export default function TaskDetailDrawer({
               </div>
             )}
 
-            <Field label="任务名">
+            <Field label={t("td.field.name")}>
               <input
                 ref={nameRef}
                 value={taskName}
                 onChange={(e) => setTaskName(e.target.value)}
-                placeholder="例如：Assignment 1、和导师开会"
+                placeholder={t("td.ph.name")}
                 style={inputStyle}
               />
             </Field>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 80px", gap: 8 }}>
-              <Field label="截止日期">
+              <Field label={t("td.field.date")}>
                 <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={inputStyle} />
               </Field>
-              <Field label="时间">
+              <Field label={t("td.field.time")}>
                 <input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} style={inputStyle} />
               </Field>
-              <Field label="权重 %">
+              <Field label={t("td.field.weight")}>
                 <input
                   type="number" min={0} max={100} step={1}
                   value={weight} onChange={(e) => setWeight(e.target.value)}
@@ -327,30 +310,30 @@ export default function TaskDetailDrawer({
             </div>
 
             {/* 状态 + 优先级（同一行 segmented） */}
-            <Field label="状态">
+            <Field label={t("td.field.status")}>
               <SegmentedRadio
-                options={STATUS_OPTIONS.map((s) => ({ value: s.v, label: s.label, color: s.color }))}
+                options={STATUS_OPTIONS.map((s) => ({ value: s.v, label: t(s.labelKey), color: s.color }))}
                 value={status}
                 onChange={(v) => setStatus(v as TaskStatus)}
               />
             </Field>
 
-            <Field label="优先级">
+            <Field label={t("td.field.priority")}>
               <SegmentedRadio
                 options={[
-                  { value: "", label: "无", color: "var(--color-text-faint)" },
-                  ...PRIORITY_OPTIONS.map((p) => ({ value: p.v, label: p.label, color: p.color })),
+                  { value: "", label: t("td.priority.none"), color: "var(--color-text-faint)" },
+                  ...PRIORITY_OPTIONS.map((p) => ({ value: p.v, label: t(p.labelKey), color: p.color })),
                 ]}
                 value={priority}
                 onChange={(v) => setPriority(v as TaskPriority | "")}
               />
             </Field>
 
-            <Field label="标签（逗号分隔）">
+            <Field label={t("td.field.tags")}>
               <input
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="例如：C245, 期末, 论文"
+                placeholder={t("td.ph.tags")}
                 style={inputStyle}
               />
               {tagsInput.trim() && (
@@ -385,22 +368,22 @@ export default function TaskDetailDrawer({
                 style={{ width: 16, height: 16, accentColor: "var(--color-primary)", cursor: "pointer" }}
               />
               <Users size={14} color="var(--color-info)" />
-              小组协作任务
+              {t("td.groupwork")}
             </label>
 
-            <Field label="说明">
+            <Field label={t("td.field.desc")}>
               <textarea
                 value={description} onChange={(e) => setDescription(e.target.value)}
-                placeholder="可选，比如「Submit via Blackboard」"
+                placeholder={t("td.ph.desc")}
                 rows={2}
                 style={{ ...inputStyle, resize: "vertical", minHeight: 52 }}
               />
             </Field>
 
-            <Field label="备注（长篇）">
+            <Field label={t("td.field.notes")}>
               <textarea
                 value={notes} onChange={(e) => setNotes(e.target.value)}
-                placeholder="可写更详细的笔记、关键信息提醒、链接等"
+                placeholder={t("td.ph.notes")}
                 rows={3}
                 style={{ ...inputStyle, resize: "vertical", minHeight: 72 }}
               />
@@ -410,7 +393,7 @@ export default function TaskDetailDrawer({
 
             {/* B1 关联笔记（仅 edit 模式 + 父组件传入 callbacks 时显示） */}
             {isEdit && init && (onCreateLinkedNote || linkedNote) && (
-              <Field label="关联笔记">
+              <Field label={t("td.field.linkedNote")}>
                 {linkedNote ? (
                   <div
                     style={{
@@ -435,23 +418,23 @@ export default function TaskDetailDrawer({
                         textOverflow: "ellipsis",
                       }}
                     >
-                      {linkedNote.title || "(无标题)"}
+                      {linkedNote.title || t("td.note.untitled")}
                     </span>
                     {onJumpToNote && (
                       <button
                         type="button"
                         onClick={() => onJumpToNote(linkedNote.id)}
-                        title="在 Notes 打开"
+                        title={t("td.note.openTitle")}
                         style={smallBtnStyle()}
                       >
-                        打开
+                        {t("td.note.open")}
                       </button>
                     )}
                     {onUnlinkNote && (
                       <button
                         type="button"
                         onClick={() => onUnlinkNote(init.id)}
-                        title="解除关联"
+                        title={t("td.note.unlinkTitle")}
                         style={smallBtnStyle(true)}
                       >
                         <Unlink size={11} />
@@ -489,7 +472,7 @@ export default function TaskDetailDrawer({
                         el.style.color = "var(--color-text-muted)";
                       }}
                     >
-                      <BookOpen size={13} /> 创建关联笔记
+                      <BookOpen size={13} /> {t("td.note.create")}
                     </button>
                   )
                 )}
@@ -511,7 +494,7 @@ export default function TaskDetailDrawer({
                 <button
                   type="button"
                   onClick={() => {
-                    if (init && confirm(`删除「${init.taskName}」？`)) onDelete(init.id);
+                    if (init && confirm(t("tasks.deleteConfirm", { name: init.taskName }))) onDelete(init.id);
                   }}
                   style={{
                     display: "flex", alignItems: "center", gap: 4,
@@ -522,7 +505,7 @@ export default function TaskDetailDrawer({
                     fontFamily: "inherit",
                   }}
                 >
-                  <Trash2 size={12} /> 删除
+                  <Trash2 size={12} /> {t("td.delete")}
                 </button>
               )}
             </div>
@@ -537,7 +520,7 @@ export default function TaskDetailDrawer({
                   fontFamily: "inherit",
                 }}
               >
-                取消
+                {t("common.cancel")}
               </button>
               <button
                 type="submit"
@@ -550,7 +533,7 @@ export default function TaskDetailDrawer({
                   fontFamily: "inherit",
                 }}
               >
-                {isEdit ? "保存" : "创建"}
+                {isEdit ? t("td.save") : t("td.create")}
               </button>
             </div>
           </footer>
@@ -661,6 +644,7 @@ function AttachmentsEditor({
   attachments: DdlAttachment[];
   setAttachments: React.Dispatch<React.SetStateAction<DdlAttachment[]>>;
 }) {
+  const { t } = useT();
   const [adding, setAdding] = useState<null | "url" | "filepath">(null);
   const [input, setInput] = useState("");
   const [labelInput, setLabelInput] = useState("");
@@ -717,7 +701,7 @@ function AttachmentsEditor({
           letterSpacing: 0.4, display: "block", marginBottom: 6,
         }}
       >
-        附件
+        {t("td.field.attachments")}
       </span>
 
       {attachments.length > 0 && (
@@ -751,9 +735,9 @@ function AttachmentsEditor({
       )}
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        <AddBtn icon={<Link2 size={11} />} label="链接" onClick={() => setAdding("url")} />
-        <AddBtn icon={<FolderOpen size={11} />} label="路径" onClick={() => setAdding("filepath")} />
-        <AddBtn icon={<Upload size={11} />} label={uploading ? "上传中…" : "上传"} onClick={() => fileRef.current?.click()} />
+        <AddBtn icon={<Link2 size={11} />} label={t("td.att.link")} onClick={() => setAdding("url")} />
+        <AddBtn icon={<FolderOpen size={11} />} label={t("td.att.path")} onClick={() => setAdding("filepath")} />
+        <AddBtn icon={<Upload size={11} />} label={uploading ? t("td.att.uploading") : t("td.att.upload")} onClick={() => fileRef.current?.click()} />
         <input ref={fileRef} type="file" multiple style={{ display: "none" }} onChange={handleUpload} />
       </div>
     </div>
@@ -761,6 +745,7 @@ function AttachmentsEditor({
 }
 
 function AttChip({ att, onRemove }: { att: DdlAttachment; onRemove: () => void }) {
+  const { t } = useT();
   const Icon = att.kind === "url" ? Link2 : att.kind === "filepath" ? FolderOpen : pickBlobIcon(att);
   return (
     <div
@@ -776,7 +761,7 @@ function AttChip({ att, onRemove }: { att: DdlAttachment; onRemove: () => void }
         {att.label}
       </span>
       <button
-        type="button" onClick={onRemove} aria-label="移除"
+        type="button" onClick={onRemove} aria-label={t("td.att.remove")}
         style={{
           width: 16, height: 16, borderRadius: 4, border: "none", padding: 0,
           background: "transparent", cursor: "pointer", color: "var(--color-text-faint)",

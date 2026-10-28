@@ -12,7 +12,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { useT, type Lang } from "@/lib/i18n";
-import { X, Moon, Feather, Type, Heart, MessageSquare, Flame, Palette, RotateCcw, Upload, User, AlignLeft, AlignCenter, AlignRight, EyeOff, Volume2, VolumeX, Languages } from "lucide-react";
+import { X, Moon, Feather, Pencil, Type, Heart, MessageSquare, Flame, Palette, RotateCcw, Upload, User, AlignLeft, AlignCenter, AlignRight, EyeOff, Volume2, VolumeX, Languages } from "lucide-react";
 import {
   ACCENT_PRESETS,
   DEFAULT_ACCENT,
@@ -40,7 +40,7 @@ import {
   playSound,
 } from "@/lib/sound";
 
-export type Theme = "light" | "dark" | "retro";
+export type Theme = "paper" | "dark" | "retro";
 type FontSize = "sm" | "md" | "lg";
 export type Personality = "gentle" | "standard" | "sassy";
 
@@ -48,9 +48,12 @@ const THEME_KEY = "butler.theme";
 const FONT_KEY = "butler.fontSize";
 const PERSONALITY_KEY = "butler.personality";
 
-// [081] 去掉浅色/深色切换：默认深炭蓝暗色。light 一律归一到 dark；仅保留 dark / retro。
+// 默认 = 纸感（anti-polish）。dark = 原墨绿玻璃「简单」主题；retro = 复古。
+// legacy "light"/null 一律归一到 paper。
 function normalizeTheme(raw: string | null): Theme {
-  return raw === "retro" ? "retro" : "dark";
+  if (raw === "dark") return "dark";
+  if (raw === "retro") return "retro";
+  return "paper";
 }
 
 export function applyStoredPreferences() {
@@ -67,11 +70,11 @@ export function applyStoredPreferences() {
 
 /** 读当前主题（dark 默认；light 归一到 dark）*/
 export function getStoredTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "paper";
   try {
     return normalizeTheme(localStorage.getItem(THEME_KEY));
   } catch {
-    return "dark";
+    return "paper";
   }
 }
 
@@ -102,7 +105,7 @@ interface Props {
 export default function PreferencesPanel({ open, onClose }: Props) {
   const isMobile = useIsMobile();
   const { t, lang, setLang } = useT();
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("paper");
   const [font, setFont] = useState<FontSize>("md");
   const [personality, setPersonality] = useState<Personality>("standard");
   const [accent, setAccent] = useState<string>(DEFAULT_ACCENT);
@@ -208,7 +211,7 @@ export default function PreferencesPanel({ open, onClose }: Props) {
       const wp = await setWallpaper(file); // 存 IndexedDB + dispatch（WallpaperLayer 即时换）
       setWpKind(wp.kind);
     } catch (e) {
-      setWpErr(e instanceof Error ? e.message : "上传失败");
+      setWpErr(e instanceof Error ? e.message : t("prefs.uploadFail"));
     } finally {
       setWpUploading(false);
     }
@@ -258,12 +261,12 @@ export default function PreferencesPanel({ open, onClose }: Props) {
     });
   };
   const SOUND_CATEGORY_LABELS: Record<SoundCategory, string> = {
-    task: "任务（勾完成）",
-    chat: "对话（发送 / AI 回复）",
-    toast: "Toast 通知",
-    achievement: "成就 / streak",
-    focus: "专注计时（开始 / 结束 / 5 min 提醒）",
-    panel: "面板（新建）",
+    task: t("prefs.sound.task"),
+    chat: t("prefs.sound.chat"),
+    toast: t("prefs.sound.toast"),
+    achievement: t("prefs.sound.achievement"),
+    focus: t("prefs.sound.focus"),
+    panel: t("prefs.sound.panel"),
   };
 
   const applyTheme = (t: Theme) => {
@@ -310,7 +313,7 @@ export default function PreferencesPanel({ open, onClose }: Props) {
       />
       <div
         role="dialog"
-        aria-label="偏好设置"
+        aria-label={t("prefs.title")}
         style={{
           position: "fixed",
           ...(isMobile
@@ -358,7 +361,7 @@ export default function PreferencesPanel({ open, onClose }: Props) {
           </h2>
           <button
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t("common.close")}
             style={{
               width: 28, height: 28, borderRadius: 6, border: "none",
               background: "transparent", cursor: "pointer",
@@ -376,18 +379,19 @@ export default function PreferencesPanel({ open, onClose }: Props) {
           {/* [072] 语言（中英主语言切换）*/}
           <Section title={t("prefs.section.language")}>
             <SegRow>
-              <SegBtn active={lang === "zh"} onClick={() => setLang("zh")} icon={<Languages size={14} />} label={t("prefs.language.zh")} />
               <SegBtn active={lang === "en"} onClick={() => setLang("en")} icon={<Languages size={14} />} label={t("prefs.language.en")} />
+              <SegBtn active={lang === "zh"} onClick={() => setLang("zh")} icon={<Languages size={14} />} label={t("prefs.language.zh")} />
             </SegRow>
             <p style={{ fontSize: 11, color: "var(--color-text-faint)", marginTop: 6, lineHeight: 1.5 }}>
               {t("prefs.language.hint")}
             </p>
           </Section>
 
-          {/* 主题（已去掉浅色，仅 暗色 / 复古）*/}
+          {/* 主题：纸感(默认) / 简单(原墨绿玻璃) / 复古 */}
           <Section title={t("prefs.section.theme")}>
             <SegRow>
-              <SegBtn active={theme === "dark"} onClick={() => applyTheme("dark")} icon={<Moon size={14} />} label={t("theme.dark")} />
+              <SegBtn active={theme === "paper"} onClick={() => applyTheme("paper")} icon={<Pencil size={14} />} label={t("theme.paper")} />
+              <SegBtn active={theme === "dark"} onClick={() => applyTheme("dark")} icon={<Moon size={14} />} label={t("theme.simple")} />
               <SegBtn active={theme === "retro"} onClick={() => applyTheme("retro")} icon={<Feather size={14} />} label={t("theme.retro")} />
             </SegRow>
           </Section>
@@ -406,7 +410,7 @@ export default function PreferencesPanel({ open, onClose }: Props) {
               ))}
               {/* 自定义 color picker：HTML5 input type=color */}
               <label
-                title="自定义颜色"
+                title={t("prefs.accent.custom")}
                 style={{
                   position: "relative",
                   width: 30, height: 30, borderRadius: 8,
@@ -432,8 +436,8 @@ export default function PreferencesPanel({ open, onClose }: Props) {
               {accent.toUpperCase() !== DEFAULT_ACCENT.toUpperCase() && (
                 <button
                   onClick={() => applyAccent(null)}
-                  title="重置为默认墨绿"
-                  aria-label="重置主题色"
+                  title={t("prefs.accent.resetTitle")}
+                  aria-label={t("prefs.accent.resetAria")}
                   style={{
                     width: 30, height: 30, borderRadius: 8,
                     border: "1px solid var(--color-border)",
@@ -468,17 +472,17 @@ export default function PreferencesPanel({ open, onClose }: Props) {
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {/* 管家位置 4 档 */}
               <div>
-                <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: "0 0 6px", fontWeight: 500 }}>管家位置</p>
+                <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: "0 0 6px", fontWeight: 500 }}>{t("prefs.butlerPos")}</p>
                 <SegRow>
-                  <SegBtn active={butlerPos === "left"}   onClick={() => applyButlerPos("left")}   icon={<AlignLeft size={12} />} label="左" />
-                  <SegBtn active={butlerPos === "center"} onClick={() => applyButlerPos("center")} icon={<AlignCenter size={12} />} label="中" />
-                  <SegBtn active={butlerPos === "right"}  onClick={() => applyButlerPos("right")}  icon={<AlignRight size={12} />} label="右" />
-                  <SegBtn active={butlerPos === "hidden"} onClick={() => applyButlerPos("hidden")} icon={<EyeOff size={12} />} label="隐藏" />
+                  <SegBtn active={butlerPos === "left"}   onClick={() => applyButlerPos("left")}   icon={<AlignLeft size={12} />} label={t("prefs.pos.left")} />
+                  <SegBtn active={butlerPos === "center"} onClick={() => applyButlerPos("center")} icon={<AlignCenter size={12} />} label={t("prefs.pos.center")} />
+                  <SegBtn active={butlerPos === "right"}  onClick={() => applyButlerPos("right")}  icon={<AlignRight size={12} />} label={t("prefs.pos.right")} />
+                  <SegBtn active={butlerPos === "hidden"} onClick={() => applyButlerPos("hidden")} icon={<EyeOff size={12} />} label={t("prefs.pos.hidden")} />
                 </SegRow>
               </div>
               {/* Tab 显示/隐藏 */}
               <div>
-                <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: "0 0 6px", fontWeight: 500 }}>显示 Tab</p>
+                <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: "0 0 6px", fontWeight: 500 }}>{t("prefs.showTab")}</p>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {ALL_TABS.map((id) => {
                     const visible = !hiddenTabs.has(id);
@@ -526,14 +530,14 @@ export default function PreferencesPanel({ open, onClose }: Props) {
                 }}
               >
                 {soundPrefs.enabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
-                {soundPrefs.enabled ? "已启用音效" : "音效已关闭（点击启用）"}
+                {soundPrefs.enabled ? t("prefs.sound.enabled") : t("prefs.sound.disabled")}
               </button>
 
               {/* 分类开关 + 音量 + 静音时段（仅启用时显示）*/}
               {soundPrefs.enabled && (
                 <>
                   <div>
-                    <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: "0 0 6px", fontWeight: 500 }}>分类</p>
+                    <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: "0 0 6px", fontWeight: 500 }}>{t("prefs.sound.category")}</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {(Object.keys(SOUND_CATEGORY_LABELS) as SoundCategory[]).map((cat) => (
                         <label
@@ -560,7 +564,7 @@ export default function PreferencesPanel({ open, onClose }: Props) {
                   {/* 音量 */}
                   <div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                      <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: 0, fontWeight: 500 }}>音量</p>
+                      <p style={{ fontSize: 11, color: "var(--color-text-muted)", margin: 0, fontWeight: 500 }}>{t("prefs.sound.volume")}</p>
                       <span style={{ fontSize: 11, color: "var(--color-text-muted)", fontFamily: "ui-monospace, monospace" }}>
                         {Math.round(soundPrefs.volume * 100)}%
                       </span>
@@ -633,7 +637,7 @@ export default function PreferencesPanel({ open, onClose }: Props) {
                 {customPreview ? (
                   <img
                     src={customPreview.url}
-                    alt="自定义管家"
+                    alt={t("prefs.butler.alt")}
                     style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
                   />
                 ) : (
@@ -656,7 +660,7 @@ export default function PreferencesPanel({ open, onClose }: Props) {
                       fontFamily: "inherit",
                     }}
                   >
-                    <Upload size={12} /> {uploading ? "处理中…" : customPreview ? "替换" : "上传"}
+                    <Upload size={12} /> {uploading ? t("prefs.processing") : customPreview ? t("prefs.replace") : t("prefs.upload")}
                   </button>
                   {customPreview && (
                     <button
@@ -679,7 +683,7 @@ export default function PreferencesPanel({ open, onClose }: Props) {
                 <p style={{ fontSize: 11, color: "var(--color-text-faint)", marginTop: 6, lineHeight: 1.5, margin: "6px 0 0" }}>
                   {customPreview
                     ? `已上传 ${customPreview.w}×${customPreview.h}px（替换全部 7 姿势）`
-                    : "PNG/JPG 单图，自动白底抠图 + 裁剪；上限 4MB"}
+                    : t("prefs.butler.hint")}
                 </p>
                 {uploadErr && (
                   <p style={{ fontSize: 11, color: "var(--color-danger)", marginTop: 4, margin: "4px 0 0" }}>
@@ -716,7 +720,7 @@ export default function PreferencesPanel({ open, onClose }: Props) {
                   cursor: wpUploading ? "wait" : "pointer", fontFamily: "inherit",
                 }}
               >
-                <Upload size={12} /> {wpUploading ? "处理中…" : "上传图片 / 视频"}
+                <Upload size={12} /> {wpUploading ? t("prefs.processing") : t("prefs.wp.upload")}
               </button>
               {wpKind && (
                 <button
@@ -735,15 +739,15 @@ export default function PreferencesPanel({ open, onClose }: Props) {
             </div>
             <p style={{ fontSize: 11, color: "var(--color-text-faint)", margin: "6px 0 0", lineHeight: 1.5 }}>
               {wpKind
-                ? `当前壁纸：${wpKind === "video" ? "视频" : "图片"}（浮在玻璃胶囊之后）`
-                : "默认网格底。可换成图片（≤10MB）或循环视频（≤60MB）"}
+                ? t("prefs.wp.current", { kind: wpKind === "video" ? t("prefs.wp.video") : t("prefs.wp.image") })
+                : t("prefs.wp.hint")}
             </p>
             {wpErr && (
               <p style={{ fontSize: 11, color: "var(--color-danger)", margin: "4px 0 0" }}>⚠️ {wpErr}</p>
             )}
             {/* 暗化滑块：保证壁纸上玻璃文字可读 */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-              <span style={{ fontSize: 11, color: "var(--color-text-muted)", flexShrink: 0 }}>暗化</span>
+              <span style={{ fontSize: 11, color: "var(--color-text-muted)", flexShrink: 0 }}>{t("prefs.wp.dim")}</span>
               <input
                 type="range"
                 min={0} max={0.7} step={0.05}

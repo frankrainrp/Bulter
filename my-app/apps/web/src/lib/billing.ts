@@ -106,6 +106,10 @@ export interface Invoice {
   cycle: BillingCycle;
   amount: number;
   status: "paid";
+  /** 账单类型：订阅（默认）/ 积分加油包 */
+  kind?: "plan" | "pack";
+  /** kind=pack：包含的积分数 */
+  credits?: number;
 }
 
 const SUB_KEY = "butler.subscription";
@@ -202,7 +206,7 @@ export function addInvoice(inv: Invoice) {
 }
 
 // ---------- 模型门槛 ----------
-const FREE_MODELS: AiModelId[] = ["deepseek-v4-flash", "deepseek-v4-thinking"];
+const FREE_MODELS: AiModelId[] = ["deepseek-v4-flash"];
 
 /** Free 仅 Flash；Pro/Max 解锁全部模型 */
 export function isModelAllowed(modelId: AiModelId, plan: PlanId): boolean {

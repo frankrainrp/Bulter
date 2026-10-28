@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@smart-hub/web", "dev"],
       "port": 3000
+    },
+    {
+      "name": "shun",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "D:\\User\\asus\\Desktop\\瞬", "dev"],
+      "port": 1420
     }
   ]
 }

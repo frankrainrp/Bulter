@@ -12,46 +12,24 @@
 
 import React, { useEffect, useState } from "react";
 import { X, ArrowRight, ArrowLeft, SkipForward } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 interface Step {
   /** 目标元素 selector;为空则居中显示 */
   selector?: string;
-  title: string;
-  body: string;
+  /** i18n key（标题 / 正文）*/
+  titleKey: string;
+  bodyKey: string;
   /** tooltip 相对 anchor 的位置 */
   placement?: "bottom" | "top" | "right" | "left" | "center";
 }
 
 const STEPS: Step[] = [
-  {
-    placement: "center",
-    title: "👋 你好,我是 Butler",
-    body: "你的智能学习管家。30 秒带你看完最核心的 5 件事。",
-  },
-  {
-    selector: "header nav",
-    placement: "bottom",
-    title: "1️⃣ 4 个面板",
-    body: "Chat 找我对话 · Tasks 任务清单 · Calendar 日历 · Notes 笔记。\n按 ⌘N 在当前 Tab 快速新建。",
-  },
-  {
-    selector: "#chat-input",
-    placement: "top",
-    title: "2️⃣ 跟我自然对话",
-    body: "试着说「明天 9 点开会」,我会自动建任务。\n或者拖一份 PDF 课件给我,我帮你提取所有 DDL。",
-  },
-  {
-    selector: "[id=\"model-selector-btn\"]",
-    placement: "top",
-    title: "3️⃣ 切换 AI 模型",
-    body: "Flash 模式日常用、速度快;思考模式适合复杂题,可看 CoT 推理。",
-  },
-  {
-    selector: "input[placeholder*=\"Search\"]",
-    placement: "bottom",
-    title: "4️⃣ 全局搜索 ⌘K",
-    body: "按 ⌘K 搜任何任务 / 笔记 / 对话,点结果可跳转高亮。\n按 ? 查看全部快捷键。",
-  },
+  { placement: "center", titleKey: "tour.s0.title", bodyKey: "tour.s0.body" },
+  { selector: "header nav", placement: "bottom", titleKey: "tour.s1.title", bodyKey: "tour.s1.body" },
+  { selector: "#chat-input", placement: "top", titleKey: "tour.s2.title", bodyKey: "tour.s2.body" },
+  { selector: "[id=\"model-selector-btn\"]", placement: "top", titleKey: "tour.s3.title", bodyKey: "tour.s3.body" },
+  { selector: "input[placeholder*=\"Search\"]", placement: "bottom", titleKey: "tour.s4.title", bodyKey: "tour.s4.body" },
 ];
 
 const KEY = "butler.onboarded";
@@ -64,6 +42,7 @@ interface Props {
 }
 
 export default function OnboardingTour({ forceOpen = null, onClose }: Props) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [stepIdx, setStepIdx] = useState(0);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
@@ -165,7 +144,7 @@ export default function OnboardingTour({ forceOpen = null, onClose }: Props) {
         style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(15,23,42,0.55)",
+          background: "var(--color-overlay)",
           zIndex: 100,
           animation: "tour-fade 0.2s ease-out",
           ...(anchorRect && {
@@ -185,8 +164,8 @@ export default function OnboardingTour({ forceOpen = null, onClose }: Props) {
             width: anchorRect.width + 12,
             height: anchorRect.height + 12,
             border: "3px solid var(--color-primary)",
-            borderRadius: 10,
-            boxShadow: "0 0 0 9999px rgba(15,23,42,0.55)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "0 0 0 9999px var(--color-overlay)",
             pointerEvents: "none",
             zIndex: 101,
             animation: "tour-pulse 1.6s ease-in-out infinite",
@@ -200,11 +179,11 @@ export default function OnboardingTour({ forceOpen = null, onClose }: Props) {
           position: "fixed",
           ...tooltipStyle,
           width: 320,
-          background: "var(--color-bg)",
-          border: "1px solid var(--color-primary)",
-          borderRadius: 12,
+          background: "var(--color-surface)",
+          border: "2px solid var(--color-border)",
+          borderRadius: "var(--radius-card)",
           padding: 16,
-          boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
+          boxShadow: "var(--shadow-modal)",
           zIndex: 102,
           fontFamily: "inherit",
           color: "var(--color-text)",
@@ -243,8 +222,8 @@ export default function OnboardingTour({ forceOpen = null, onClose }: Props) {
           </div>
           <button
             onClick={() => close(true)}
-            aria-label="跳过"
-            title="跳过引导"
+            aria-label={t("tour.skip")}
+            title={t("tour.skipTitle")}
             style={{
               width: 22, height: 22, border: "none", background: "transparent",
               cursor: "pointer", color: "var(--color-text-muted)",
@@ -257,10 +236,10 @@ export default function OnboardingTour({ forceOpen = null, onClose }: Props) {
         </div>
 
         <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)", margin: "0 0 6px" }}>
-          {step.title}
+          {t(step.titleKey)}
         </h3>
         <p style={{ fontSize: 13, color: "var(--color-text-muted)", margin: "0 0 14px", lineHeight: 1.55, whiteSpace: "pre-line" }}>
-          {step.body}
+          {t(step.bodyKey)}
         </p>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -279,7 +258,7 @@ export default function OnboardingTour({ forceOpen = null, onClose }: Props) {
               gap: 3,
             }}
           >
-            <SkipForward size={11} /> 跳过
+            <SkipForward size={11} /> {t("tour.skip")}
           </button>
           <div style={{ display: "flex", gap: 6 }}>
             {!isFirst && (
@@ -299,7 +278,7 @@ export default function OnboardingTour({ forceOpen = null, onClose }: Props) {
                   gap: 3,
                 }}
               >
-                <ArrowLeft size={11} /> 上一步
+                <ArrowLeft size={11} /> {t("tour.prev")}
               </button>
             )}
             <button
@@ -319,7 +298,7 @@ export default function OnboardingTour({ forceOpen = null, onClose }: Props) {
                 gap: 3,
               }}
             >
-              {isLast ? "开始使用 ✓" : "下一步"} {!isLast && <ArrowRight size={11} />}
+              {isLast ? t("tour.start") : t("tour.next")} {!isLast && <ArrowRight size={11} />}
             </button>
           </div>
         </div>
@@ -331,8 +310,8 @@ export default function OnboardingTour({ forceOpen = null, onClose }: Props) {
           to { opacity: 1; }
         }
         @keyframes tour-pulse {
-          0%, 100% { box-shadow: 0 0 0 9999px rgba(15,23,42,0.55), 0 0 0 0 color-mix(in srgb, var(--color-primary) 40%, transparent); }
-          50%      { box-shadow: 0 0 0 9999px rgba(15,23,42,0.55), 0 0 0 8px color-mix(in srgb, var(--color-primary) 25%, transparent); }
+          0%, 100% { box-shadow: 0 0 0 9999px var(--color-overlay), 0 0 0 0 color-mix(in srgb, var(--color-primary) 40%, transparent); }
+          50%      { box-shadow: 0 0 0 9999px var(--color-overlay), 0 0 0 8px color-mix(in srgb, var(--color-primary) 25%, transparent); }
         }
       `}</style>
     </>

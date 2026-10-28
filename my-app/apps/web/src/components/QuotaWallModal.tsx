@@ -1,25 +1,32 @@
 "use client";
 
 // ============================================================
-// components/QuotaWallModal.tsx — [087] 免费额度耗尽 softwall
+// components/QuotaWallModal.tsx — softwall（[087] 免费窗口耗尽 / P5′ 积分不足）
 //
-// 当前 5h 窗口免费额度（¥0.6）用尽时弹出。永远给"继续免费"出口（切回 Flash），
-// 绝不让用户撞墙流失。详见 Doc/变现方案.md §2.3。
+// mode="window"：5h 免费窗口用尽 → 切 Flash / 买加油包 / 开会员（带回满倒计时）。
+// mode="credits"：高级操作积分不足 → 买加油包 / 开会员（显示所需 vs 余额）。
+// 永远给"继续免费"出口，绝不让用户撞墙流失。详见 Doc/变现方案.md §2.3 / §3。
 // ============================================================
 
 import React, { useEffect, useState } from "react";
 import { Crown, Zap, Wallet, X, Clock } from "lucide-react";
-import { formatCountdown, WINDOW_BUDGET } from "@/lib/usage";
+import { formatCountdown } from "@/lib/usage";
+import { useCredits } from "@/lib/credits";
+import { useT } from "@/lib/i18n";
 
 interface QuotaWallModalProps {
   open: boolean;
-  /** 下次额度回满时间戳 */
+  /** "window"=免费窗口耗尽（默认）；"credits"=积分不足 */
+  mode?: "window" | "credits";
+  /** credits 模式：本次操作所需积分 */
+  creditsNeed?: number;
+  /** 下次额度回满时间戳（window 模式） */
   resetAt: number;
   /** 是否可降级到 Flash 继续免费（当前模型非 Flash 时为 true）*/
   canFallbackFlash: boolean;
   /** 切回 Flash 继续免费 */
   onSwitchFlash: () => void;
-  /** 充值钱包（暂复用定价页，P5 接真钱包后改）*/
+  /** 买积分加油包 */
   onTopUp: () => void;
   /** 开会员 */
   onUpgrade: () => void;
@@ -27,8 +34,10 @@ interface QuotaWallModalProps {
 }
 
 export default function QuotaWallModal({
-  open, resetAt, canFallbackFlash, onSwitchFlash, onTopUp, onUpgrade, onClose,
+  open, mode = "window", creditsNeed = 0, resetAt, canFallbackFlash, onSwitchFlash, onTopUp, onUpgrade, onClose,
 }: QuotaWallModalProps) {
+  const { t } = useT();
+  const credits = useCredits();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!open) return;
@@ -37,6 +46,7 @@ export default function QuotaWallModal({
   }, [open]);
 
   if (!open) return null;
+  const isCredits = mode === "credits";
   const reset = formatCountdown(resetAt, now);
 
   return (
@@ -61,7 +71,7 @@ export default function QuotaWallModal({
         <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--color-border-soft)", position: "relative" }}>
           <button
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t("common.close")}
             style={{
               position: "absolute", top: 14, right: 14, width: 28, height: 28,
               display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -71,41 +81,48 @@ export default function QuotaWallModal({
           >
             <X size={16} />
           </button>
-          <div style={{ fontSize: 24, lineHeight: 1, marginBottom: 8 }}>🔥</div>
+          <div style={{ fontSize: 24, lineHeight: 1, marginBottom: 8 }}>{isCredits ? "✨" : "🔥"}</div>
           <h2 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)", margin: 0 }}>
-            本时段免费额度用完了
+            {t(isCredits ? "cw.title" : "qw.title")}
           </h2>
           <p style={{ fontSize: 13, color: "var(--color-text-muted)", margin: "6px 0 0", lineHeight: 1.5 }}>
-            你这阵和 Butler 聊得火热。每 5 小时免费额度（¥{WINDOW_BUDGET.toFixed(1)}）会回满，
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "var(--color-text)", fontWeight: 600 }}>
-              <Clock size={12} /> {reset} 后回满
-            </span>
-            。现在想继续：
+            {isCredits ? (
+              t("cw.desc", { need: creditsNeed, balance: credits.balance })
+            ) : (
+              <>
+                {t("qw.desc")}{" "}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "var(--color-text)", fontWeight: 600 }}>
+                  <Clock size={12} /> {t("qw.resetIn", { reset })}
+                </span>
+              </>
+            )}
           </p>
         </div>
 
         {/* options */}
         <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-          {canFallbackFlash && (
+          {!isCredits && canFallbackFlash && (
             <OptionRow
               icon={<Zap size={18} />}
-              title="切回 DeepSeek Flash"
-              desc="依然免费，日常对话/任务管理足够用"
+              title={t("qw.flash.title")}
+              desc={t("qw.flash.desc")}
               primary
-              badge="推荐"
+              badge={t("qw.flash.badge")}
               onClick={onSwitchFlash}
             />
           )}
           <OptionRow
             icon={<Wallet size={18} />}
-            title="充值钱包，按量继续"
-            desc="按真实用量计费（成本 ×1.3），随用随扣"
+            title={t("qw.topup.title")}
+            desc={t("qw.topup.desc")}
+            primary={isCredits}
+            badge={isCredits ? t("qw.flash.badge") : undefined}
             onClick={onTopUp}
           />
           <OptionRow
             icon={<Crown size={18} />}
-            title="开会员，更高额度 + 全模型解锁"
-            desc="折合单价比按量省 ~25%，Pro/Max 自动解锁高端模型"
+            title={t("qw.member.title")}
+            desc={t("qw.member.desc")}
             onClick={onUpgrade}
           />
         </div>

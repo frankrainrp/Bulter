@@ -8,6 +8,7 @@
 
 import React, { useEffect } from "react";
 import { Keyboard, X } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   open: boolean;
@@ -15,39 +16,40 @@ interface Props {
 }
 
 interface ShortcutItem {
-  group: string;
-  items: { keys: string[]; desc: string }[];
+  groupKey: string;
+  items: { keys: string[]; descKey: string }[];
 }
 
 const SHORTCUTS: ShortcutItem[] = [
   {
-    group: "全局",
+    groupKey: "kbd.group.global",
     items: [
-      { keys: ["⌘", "K"],  desc: "聚焦全局搜索" },
-      { keys: ["⌘", "N"],  desc: "新建当前 Tab 的项（会话/任务/笔记）" },
-      { keys: ["Esc"],      desc: "关闭抽屉 / 弹窗 / 搜索面板" },
-      { keys: ["?"],        desc: "显示此帮助面板" },
+      { keys: ["⌘", "K"],  descKey: "kbd.d.search" },
+      { keys: ["⌘", "N"],  descKey: "kbd.d.new" },
+      { keys: ["Esc"],      descKey: "kbd.d.esc" },
+      { keys: ["?"],        descKey: "kbd.d.help" },
     ],
   },
   {
-    group: "Tasks 面板",
+    groupKey: "kbd.group.tasks",
     items: [
-      { keys: ["↑", "↓"],   desc: "在任务列表中上下移动选中" },
-      { keys: ["Enter"],     desc: "编辑选中任务" },
-      { keys: ["Space"],     desc: "切换完成状态" },
+      { keys: ["↑", "↓"],   descKey: "kbd.d.move" },
+      { keys: ["Enter"],     descKey: "kbd.d.edit" },
+      { keys: ["Space"],     descKey: "kbd.d.toggle" },
     ],
   },
   {
-    group: "Chat 输入",
+    groupKey: "kbd.group.chat",
     items: [
-      { keys: ["Enter"],     desc: "发送" },
-      { keys: ["Shift", "Enter"], desc: "换行" },
-      { keys: ["IME"],       desc: "中文选词时回车不发送（自动识别）" },
+      { keys: ["Enter"],     descKey: "kbd.d.send" },
+      { keys: ["Shift", "Enter"], descKey: "kbd.d.newline" },
+      { keys: ["IME"],       descKey: "kbd.d.ime" },
     ],
   },
 ];
 
 export default function KeyboardShortcutsHelp({ open, onClose }: Props) {
+  const { t } = useT();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -72,7 +74,7 @@ export default function KeyboardShortcutsHelp({ open, onClose }: Props) {
       />
       <div
         role="dialog"
-        aria-label="键盘快捷键"
+        aria-label={t("kbd.title")}
         style={{
           position: "fixed",
           top: "50%",
@@ -101,11 +103,11 @@ export default function KeyboardShortcutsHelp({ open, onClose }: Props) {
         >
           <Keyboard size={16} color="var(--color-primary)" />
           <h2 style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "var(--color-text)", margin: 0 }}>
-            键盘快捷键
+            {t("kbd.title")}
           </h2>
           <button
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t("common.close")}
             style={{
               width: 28, height: 28, borderRadius: 6, border: "none",
               background: "transparent", cursor: "pointer",
@@ -121,7 +123,7 @@ export default function KeyboardShortcutsHelp({ open, onClose }: Props) {
 
         <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 18 }}>
           {SHORTCUTS.map((g) => (
-            <section key={g.group}>
+            <section key={g.groupKey}>
               <h3
                 style={{
                   fontSize: 11,
@@ -132,7 +134,7 @@ export default function KeyboardShortcutsHelp({ open, onClose }: Props) {
                   margin: "0 0 8px",
                 }}
               >
-                {g.group}
+                {t(g.groupKey)}
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {g.items.map((it, idx) => (
@@ -168,7 +170,7 @@ export default function KeyboardShortcutsHelp({ open, onClose }: Props) {
                       ))}
                     </div>
                     <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>
-                      {it.desc}
+                      {t(it.descKey)}
                     </span>
                   </div>
                 ))}
@@ -187,7 +189,7 @@ export default function KeyboardShortcutsHelp({ open, onClose }: Props) {
             textAlign: "center",
           }}
         >
-          Mac 用 ⌘ · Windows / Linux 用 Ctrl
+          {t("kbd.footer")}
         </footer>
       </div>
 

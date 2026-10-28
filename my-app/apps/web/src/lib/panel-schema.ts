@@ -13,12 +13,45 @@ export type BlockType = "stat" | "kpiGrid" | "table" | "bar" | "line" | "pie" | 
 export type Agg = "count" | "sum" | "avg" | "max" | "min";
 export type ValueFormat = "number" | "currency" | "percent" | "text";
 
+/** 本地数据集名（kind=local 用）；由 lib/panel-local 注册表提供真实用户数据 */
+export type LocalDataset = "ddls" | "notes" | "streak" | "sessions";
+
+// --- A1.1 transform 管道 ---
+// 取数后、blocks 消费前对行数组做声明式二次加工，让 AI 能做排序/过滤/计算字段/分组，
+// 而不只是原样展示 API 响应。无 eval —— 全部是命名算子，安全可控。
+export type FilterOp = "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "truthy" | "falsy";
+export type DeriveOp = "add" | "sub" | "mul" | "div" | "pct";
+
+export interface Transform {
+  kind: "filter" | "sort" | "limit" | "derive" | "groupBy";
+  // filter: 保留 field op value 成立的行
+  field?: string;
+  op?: FilterOp;
+  value?: unknown;
+  // sort: 按 field 升/降序
+  dir?: "asc" | "desc";
+  // limit: 取前 n 行
+  n?: number;
+  // derive: 新增字段 as = a <op> b（b 可为字段名或数字字面量；pct = a/b*100）
+  as?: string;
+  a?: string;
+  b?: string | number;
+  deriveOp?: DeriveOp;
+  // groupBy: 按 by 分组，对 metric 做 agg，输出 [{ [by], value }]
+  by?: string;
+  agg?: Agg;
+  metric?: string;
+}
+
 export interface DataSource {
   id: string;
-  kind: "static" | "http";
+  kind: "static" | "http" | "local";
   // --- static ---
   /** kind=static：内联数据（数组或对象）*/
   data?: unknown;
+  // --- local（kind=local：读本地用户数据，经 lib/panel-local 注册表）---
+  /** kind=local：要读的本地数据集 */
+  dataset?: LocalDataset;
   // --- http（经 /api/connector 服务端代理，绕 CORS / 注入密钥）---
   url?: string;
   method?: "GET" | "POST";
@@ -29,6 +62,8 @@ export interface DataSource {
   path?: string;
   /** 把「键值对象」透视成行数组（如汇率 {EUR:0.9,...} → [{currency:"EUR",rate:0.9}]）*/
   pivot?: { keyName?: string; valueName?: string };
+  /** A1.1：取数后对行数组做声明式加工（按序执行）*/
+  transforms?: Transform[];
   /** 自动刷新间隔（ms）；省略=不自动刷新 */
   refreshMs?: number;
 }
@@ -109,20 +144,34 @@ export function parseSpec(json: string): ParseResult {
   return validateSpec(raw);
 }
 
+/** SEC-13：spec 规模上限（防 DoS / 巨型载荷）*/
+export const SPEC_LIMITS = { maxSources: 20, maxBlocks: 50, maxTransforms: 15 } as const;
+
 export function validateSpec(raw: unknown): ParseResult {
   if (!raw || typeof raw !== "object") return { ok: false, error: "spec 必须是对象" };
   const o = raw as Record<string, unknown>;
   if (typeof o.title !== "string" || !o.title.trim()) return { ok: false, error: "缺少 title" };
   if (!Array.isArray(o.sources)) return { ok: false, error: "sources 必须是数组" };
   if (!Array.isArray(o.blocks)) return { ok: false, error: "blocks 必须是数组" };
+  // SEC-13：上限保护，防超大 spec（AI/导入/篡改）撑爆渲染或携带巨型载荷
+  if (o.sources.length > SPEC_LIMITS.maxSources) return { ok: false, error: `数据源过多（>${SPEC_LIMITS.maxSources}）` };
+  if (o.blocks.length > SPEC_LIMITS.maxBlocks) return { ok: false, error: `组件块过多（>${SPEC_LIMITS.maxBlocks}）` };
+  for (const s of o.sources as DataSource[]) {
+    if (s && typeof s === "object" && Array.isArray(s.transforms) && s.transforms.length > SPEC_LIMITS.maxTransforms) {
+      return { ok: false, error: `数据源 transforms 过多（>${SPEC_LIMITS.maxTransforms}）` };
+    }
+  }
   // id 是实现细节：缺失则自动补（AI/手写都不必写 id）
   (o.sources as DataSource[]).forEach((s, i) => {
     if (!s || typeof s !== "object") return;
     if (typeof s.id !== "string" || !s.id) s.id = `src-${i}`;
-    if (s.kind !== "static" && s.kind !== "http") s.kind = s.url ? "http" : "static";
+    if (s.kind !== "static" && s.kind !== "http" && s.kind !== "local") {
+      s.kind = s.dataset ? "local" : s.url ? "http" : "static";
+    }
   });
   for (const s of o.sources as DataSource[]) {
     if (s.kind === "http" && typeof s.url !== "string") return { ok: false, error: `http 数据源 ${s.id} 缺少 url` };
+    if (s.kind === "local" && !s.dataset) return { ok: false, error: `local 数据源 ${s.id} 缺少 dataset` };
   }
   (o.blocks as Block[]).forEach((b, i) => {
     if (!b || typeof b !== "object") return;
@@ -166,6 +215,97 @@ export function aggregate(rows: Record<string, unknown>[], agg: Agg = "count", f
   if (agg === "max") return Math.max(...nums);
   if (agg === "min") return Math.min(...nums);
   return 0;
+}
+
+// ============================================================
+// A1.1 transform 管道：取数后对行数组做声明式加工（无 eval，全命名算子）
+// ============================================================
+
+function num(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** 解析 derive 的操作数 b：数字字面量直接用，字符串当字段名取值 */
+function operandB(row: Record<string, unknown>, b: string | number | undefined): number {
+  if (typeof b === "number") return b;
+  if (typeof b === "string") return num(row[b]);
+  return 0;
+}
+
+function passesFilter(row: Record<string, unknown>, t: Transform): boolean {
+  const left = t.field ? row[t.field] : undefined;
+  switch (t.op) {
+    case "truthy": return Boolean(left);
+    case "falsy": return !left;
+    case "contains": return String(left ?? "").toLowerCase().includes(String(t.value ?? "").toLowerCase());
+    case "ne": return left !== t.value;
+    case "gt": return num(left) > num(t.value);
+    case "gte": return num(left) >= num(t.value);
+    case "lt": return num(left) < num(t.value);
+    case "lte": return num(left) <= num(t.value);
+    case "eq":
+    default: return left === t.value;
+  }
+}
+
+/** 按序应用 transforms，返回新行数组（不改原数据）*/
+export function applyTransforms(rows: Record<string, unknown>[], transforms?: Transform[]): Record<string, unknown>[] {
+  if (!transforms || transforms.length === 0) return rows;
+  let out = rows.slice();
+  for (const t of transforms) {
+    switch (t.kind) {
+      case "filter":
+        out = out.filter((r) => passesFilter(r, t));
+        break;
+      case "sort": {
+        if (!t.field) break;
+        const dir = t.dir === "asc" ? 1 : -1;
+        out = out.slice().sort((a, b) => {
+          const av = a[t.field!], bv = b[t.field!];
+          const an = Number(av), bn = Number(bv);
+          if (Number.isFinite(an) && Number.isFinite(bn)) return (an - bn) * dir;
+          return String(av ?? "").localeCompare(String(bv ?? "")) * dir;
+        });
+        break;
+      }
+      case "limit":
+        if (typeof t.n === "number") out = out.slice(0, t.n);
+        break;
+      case "derive": {
+        if (!t.as || !t.a) break;
+        out = out.map((r) => {
+          const a = num(r[t.a!]);
+          const b = operandB(r, t.b);
+          let v: number;
+          switch (t.deriveOp) {
+            case "add": v = a + b; break;
+            case "sub": v = a - b; break;
+            case "mul": v = a * b; break;
+            case "div": v = b !== 0 ? a / b : 0; break;
+            case "pct": v = b !== 0 ? (a / b) * 100 : 0; break;
+            default: v = a;
+          }
+          return { ...r, [t.as!]: v };
+        });
+        break;
+      }
+      case "groupBy": {
+        if (!t.by) break;
+        const groups = new Map<string, Record<string, unknown>[]>();
+        for (const r of out) {
+          const k = String(r[t.by] ?? "");
+          (groups.get(k) ?? groups.set(k, []).get(k)!).push(r);
+        }
+        out = Array.from(groups.entries()).map(([k, grp]) => ({
+          [t.by!]: k,
+          value: aggregate(grp, t.agg ?? "count", t.metric),
+        }));
+        break;
+      }
+    }
+  }
+  return out;
 }
 
 export interface SeriesPoint {

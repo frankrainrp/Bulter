@@ -11,6 +11,9 @@
 import React, { useEffect, useState } from "react";
 import { getWallpaper, getWallpaperDim, WALLPAPER_EVENT } from "@/lib/wallpaper";
 
+// 内置默认壁纸：管家纹样深绿底（用户未上传时铺这张，玻璃胶囊浮在其上）
+const DEFAULT_WALLPAPER = "/assets/wallpaper.png";
+
 type WpState = { kind: "image" | "video"; url: string } | null;
 
 export default function WallpaperLayer() {
@@ -50,7 +53,8 @@ export default function WallpaperLayer() {
     };
   }, []);
 
-  if (!wp) return null;
+  // 无用户壁纸 → 铺内置默认壁纸（深绿管家纹样，本身已够暗，不额外加遮罩）
+  const isDefault = !wp;
 
   return (
     <div
@@ -63,7 +67,7 @@ export default function WallpaperLayer() {
         pointerEvents: "none",
       }}
     >
-      {wp.kind === "video" ? (
+      {wp && wp.kind === "video" ? (
         <video
           src={wp.url}
           autoPlay
@@ -77,14 +81,14 @@ export default function WallpaperLayer() {
           style={{
             width: "100%",
             height: "100%",
-            backgroundImage: `url(${wp.url})`,
+            backgroundImage: `url(${wp ? wp.url : DEFAULT_WALLPAPER})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
         />
       )}
-      {/* 暗化遮罩：保证玻璃胶囊上的文字在亮壁纸上仍可读 */}
-      {dim > 0 && (
+      {/* 暗化遮罩：保证玻璃胶囊上的文字在亮壁纸上仍可读（默认深绿壁纸无需）*/}
+      {!isDefault && dim > 0 && (
         <div style={{ position: "absolute", inset: 0, background: `rgba(0,0,0,${dim})` }} />
       )}
     </div>

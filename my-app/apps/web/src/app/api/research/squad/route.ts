@@ -7,6 +7,7 @@
 // ============================================================
 
 import { OpenAI } from "openai";
+import { clampText, INPUT_LIMITS, rateLimited, safeError } from "@/lib/api-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,15 +26,17 @@ const SYSTEM = `你是调研小队，负责目标下的一个子问题。基于�
 4. 控制体量：rows ≤ 12 行。`;
 
 export async function POST(req: Request) {
+  const limited = rateLimited(req, 30); // SEC-05：客户端并行 fan-out 多小队，限额放宽到 30/10s
+  if (limited) return limited;
   let body: { goal?: string; squadTitle?: string; question?: string };
   try { body = await req.json(); } catch { return Response.json({ ok: false, error: "请求体非法" }, { status: 400 }); }
-  const goal = (body?.goal ?? "").trim();
-  const squadTitle = (body?.squadTitle ?? "").trim();
-  const question = (body?.question ?? "").trim();
+  const goal = clampText((body?.goal ?? "").trim(), INPUT_LIMITS.maxPromptChars);
+  const squadTitle = clampText((body?.squadTitle ?? "").trim(), 200);
+  const question = clampText((body?.question ?? "").trim(), INPUT_LIMITS.maxPromptChars);
   if (!question) return Response.json({ ok: false, error: "缺少 question" }, { status: 400 });
   if (!process.env.DEEPSEEK_API_KEY) return Response.json({ ok: false, error: "未配置 DEEPSEEK_API_KEY" }, { status: 500 });
 
-  const openai = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1" });
+  const openai = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: "https://api.deepseek.com" });
   try {
     const c = await openai.chat.completions.create({
       model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
@@ -60,6 +63,6 @@ export async function POST(req: Request) {
       usage: c.usage,
     });
   } catch (err) {
-    return Response.json({ ok: false, error: (err as Error).message }, { status: 200 });
+    return Response.json({ ok: false, error: safeError(err, "小队调研失败，请稍后重试") }, { status: 200 });
   }
 }

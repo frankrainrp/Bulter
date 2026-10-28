@@ -1,0 +1,57 @@
+---
+- name: Deploy Butler C270 final project with Docker Compose
+  hosts: butler_servers
+  become: true
+  vars:
+    app_dir: "{{ app_dir | default('/opt/butler-c270-final') }}"
+    repo_url: "{{ repo_url | default('https://github.com/frankrainrp/Bulter.git') }}"
+    repo_version: "{{ repo_version | default('codex/butler-mainline') }}"
+
+  tasks:
+    - name: Install system packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - git
+          - docker.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    - name: Ensure Docker is enabled and running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create application directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Check out application repository
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_version }}"
+        force: true
+
+    - name: Build and start Butler web container
+      ansible.builtin.command:
+        cmd: docker compose up -d --build
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Verify health endpoint
+      ansible.builtin.uri:
+        url: http://127.0.0.1:3000/api/health
+        return_content: true
+        status_code: 200
+      register: health
+
+    - name: Show deployment health result
+      ansible.builtin.debug:
+        var: health.json

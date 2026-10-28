@@ -1,0 +1,21 @@
+{
+  "name": "@smart-hub/workflows",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "inngest-cli dev"
+  },
+  "dependencies": {
+    "inngest": "^3.19.0",
+    "@smart-hub/ai-core": "workspace:*",
+    "@smart-hub/database": "workspace:*",
+    "openai": "^4.47.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  }
+}

@@ -8,6 +8,7 @@
 import React from "react";
 import { Plus, Pencil, Trash2, X, Check, BookOpen, LayoutGrid } from "lucide-react";
 import type { PendingBatch, PendingChange } from "@/lib/pending";
+import { useT, type TFunc } from "@/lib/i18n";
 
 interface ConfirmCardProps {
   batch: PendingBatch;
@@ -18,6 +19,7 @@ interface ConfirmCardProps {
 }
 
 export default function ConfirmCard({ batch, onAccept, onReject, onDropChange }: ConfirmCardProps) {
+  const { t } = useT();
   const isPending = batch.status === "pending";
   const isAccepted = batch.status === "accepted";
   const isRejected = batch.status === "rejected";
@@ -52,9 +54,9 @@ export default function ConfirmCard({ batch, onAccept, onReject, onDropChange }:
             >
               {batch.intro}
             </p>
-            {isAccepted && <StatusBadge label="已采纳" color="var(--color-success)" />}
-            {isRejected && <StatusBadge label="已取消" color="var(--color-text-faint)" />}
-            {isPending && <StatusBadge label={`待核实 (${remaining})`} color="var(--color-primary)" />}
+            {isAccepted && <StatusBadge label={t("cc.accepted")} color="var(--color-success)" />}
+            {isRejected && <StatusBadge label={t("cc.cancelled")} color="var(--color-text-faint)" />}
+            {isPending && <StatusBadge label={t("cc.pending", { n: remaining })} color="var(--color-primary)" />}
           </div>
 
           {/* changes 列表 */}
@@ -79,7 +81,7 @@ export default function ConfirmCard({ batch, onAccept, onReject, onDropChange }:
             </div>
           ) : (
             <p style={{ fontSize: 12, color: "var(--color-text-faint)", margin: 0 }}>
-              （所有改动已被移除）
+              {t("cc.allRemoved")}
             </p>
           )}
 
@@ -114,7 +116,7 @@ export default function ConfirmCard({ batch, onAccept, onReject, onDropChange }:
                 }}
               >
                 <Check size={14} />
-                接受 {remaining > 0 && `(${remaining})`}
+                {t("cc.accept")} {remaining > 0 && `(${remaining})`}
               </button>
               <button
                 onClick={() => onReject(batch.id)}
@@ -129,7 +131,7 @@ export default function ConfirmCard({ batch, onAccept, onReject, onDropChange }:
                   cursor: "pointer",
                 }}
               >
-                全部取消
+                {t("cc.rejectAll")}
               </button>
             </div>
           )}
@@ -195,7 +197,8 @@ function ChangeRow({
   canDrop: boolean;
   onDrop: () => void;
 }) {
-  const meta = describeChange(change);
+  const { t } = useT();
+  const meta = describeChange(change, t);
   return (
     <div
       style={{
@@ -244,7 +247,7 @@ function ChangeRow({
       </div>
       {canDrop && (
         <button
-          aria-label="移除此条"
+          aria-label={t("cc.removeOne")}
           onClick={onDrop}
           style={{
             width: 22,
@@ -276,7 +279,7 @@ function ChangeRow({
   );
 }
 
-function describeChange(ch: PendingChange): {
+function describeChange(ch: PendingChange, t: TFunc): {
   icon: React.ReactNode;
   bg: string;
   fg: string;
@@ -284,7 +287,7 @@ function describeChange(ch: PendingChange): {
 } {
   if (ch.kind === "create") {
     const d = ch.draft;
-    const date = d.dueDate || "待定";
+    const date = d.dueDate || t("tasks.date.tbd");
     return {
       icon: <Plus size={13} />,
       bg: "rgba(45,122,77,0.12)",
@@ -298,7 +301,7 @@ function describeChange(ch: PendingChange): {
       icon: <Pencil size={13} />,
       bg: "rgba(59,130,246,0.12)",
       fg: "var(--color-info)",
-      subline: patched.length > 0 ? `修改 ${patched.join(" · ")}` : undefined,
+      subline: patched.length > 0 ? t("cc.update", { fields: patched.join(" · ") }) : undefined,
     };
   }
   if (ch.kind === "create-note") {
@@ -308,7 +311,7 @@ function describeChange(ch: PendingChange): {
       icon: <BookOpen size={13} />,
       bg: "rgba(168,85,247,0.12)", // 紫色区别于 task（绿）
       fg: "#9333ea",
-      subline: `📝 笔记 · ${n.content.length} 字${n.tags?.length ? ` · #${n.tags.join(" #")}` : ""}${preview ? ` · ${preview}…` : ""}`,
+      subline: `${t("cc.note")} · ${t("cc.charsN", { n: n.content.length })}${n.tags?.length ? ` · #${n.tags.join(" #")}` : ""}${preview ? ` · ${preview}…` : ""}`,
     };
   }
   if (ch.kind === "create-custom-panel") {
@@ -318,13 +321,13 @@ function describeChange(ch: PendingChange): {
       icon: <LayoutGrid size={13} />,
       bg: "rgba(245,158,11,0.14)", // 琥珀黄区别于 task/note
       fg: "#B45309",
-      subline: `${isIframe ? "🌐 嵌入网页" : "📋 自定义面板"} · ${p.emoji} ${p.label}${isIframe ? ` · ${p.url}` : p.content ? ` · ${p.content.length} 字` : ""}`,
+      subline: `${isIframe ? t("cc.embed") : t("cc.panel")} · ${p.emoji} ${p.label}${isIframe ? ` · ${p.url}` : p.content ? ` · ${t("cc.charsN", { n: p.content.length })}` : ""}`,
     };
   }
   return {
     icon: <Trash2 size={13} />,
     bg: "rgba(220,38,38,0.1)",
     fg: "var(--color-danger)",
-    subline: `${ch.before.dueDate || "待定"}`,
+    subline: `${ch.before.dueDate || t("tasks.date.tbd")}`,
   };
 }

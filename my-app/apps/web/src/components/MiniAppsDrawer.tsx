@@ -19,6 +19,7 @@ import FocusTimer from "./mini-apps/FocusTimer";
 import StatsApp from "./mini-apps/StatsApp";
 import ShareCard from "./mini-apps/ShareCard";
 import { useIsMobile } from "@/lib/use-is-mobile";
+import { useT } from "@/lib/i18n";
 
 interface MiniAppCommonProps {
   ddls?: DdlItem[];
@@ -27,16 +28,16 @@ interface MiniAppCommonProps {
 
 interface MiniApp {
   id: string;
-  name: string;
+  nameKey: string;
   icon: React.ReactNode;
   Component: React.ComponentType<MiniAppCommonProps>;
   disabled?: boolean;
 }
 
 const APPS: MiniApp[] = [
-  { id: "focus", name: "专注计时", icon: <Target size={16} />, Component: FocusTimer },
-  { id: "stats", name: "学习统计", icon: <BarChart3 size={16} />, Component: StatsApp },
-  { id: "share", name: "分享卡片", icon: <Share2 size={16} />, Component: ShareCard },
+  { id: "focus", nameKey: "mini.focus", icon: <Target size={16} />, Component: FocusTimer },
+  { id: "stats", nameKey: "mini.stats", icon: <BarChart3 size={16} />, Component: StatsApp },
+  { id: "share", nameKey: "mini.share", icon: <Share2 size={16} />, Component: ShareCard },
 ];
 
 interface MiniAppsDrawerProps {
@@ -53,6 +54,7 @@ export default function MiniAppsDrawer({ open, onClose, ddls = [], onAppendTaskN
   const active = APPS.find((a) => a.id === activeId) ?? APPS[0];
   const ActiveComponent = active.Component;
   const isMobile = useIsMobile();
+  const { t } = useT();
 
   return (
     <>
@@ -131,11 +133,11 @@ export default function MiniAppsDrawer({ open, onClose, ddls = [], onAppendTaskN
               flex: 1,
             }}
           >
-            学习工具
+            {t("mini.title")}
           </h2>
           <button
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t("common.close")}
             style={{
               width: 28,
               height: 28,
@@ -190,7 +192,7 @@ export default function MiniAppsDrawer({ open, onClose, ddls = [], onAppendTaskN
                   }}
                 >
                   {app.icon}
-                  {app.name}
+                  {t(app.nameKey)}
                 </button>
               );
             })}

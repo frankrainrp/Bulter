@@ -1,0 +1,49 @@
+name: Butler C270 CI/CD
+
+on:
+  push:
+    branches: ["master", "main", "dev", "feature/**", "codex/**", "ui/**"]
+  pull_request:
+    branches: ["master", "main", "dev"]
+
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  validate-build-container:
+    name: Validate, test, build, and containerise
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate required DevOps artefacts
+        run: pnpm ci:validate
+
+      - name: Run automated tests
+        run: pnpm test
+
+      - name: Build application
+        run: pnpm build
+
+      - name: DevSecOps dependency scan
+        run: pnpm audit --audit-level critical
+
+      - name: Build Docker image
+        run: docker build -t butler-c270-final:ci .

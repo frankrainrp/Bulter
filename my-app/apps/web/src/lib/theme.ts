@@ -12,11 +12,11 @@
 // ============================================================
 
 export const ACCENT_KEY = "butler.accent";
-export const DEFAULT_ACCENT = "#1B3D2F"; // 墨绿（与 globals.css :root 一致）
+export const DEFAULT_ACCENT = "#4A7C99"; // 钢蓝（与 globals.css :root 一致）
 
 /** UI 用快捷预设 — 横排 swatch 一键应用 */
 export const ACCENT_PRESETS: Array<{ label: string; value: string }> = [
-  { label: "墨绿", value: "#1B3D2F" }, // 默认 forest
+  { label: "钢蓝青", value: "#4A7C99" }, // 默认 teal/steel
   { label: "海军蓝", value: "#1E3A5F" },
   { label: "紫罗兰", value: "#5B3A8E" },
   { label: "玫瑰红", value: "#9D2B4F" },

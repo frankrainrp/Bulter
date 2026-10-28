@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { ProcessingPipeline as Pipeline, PipelineStep } from "@/lib/types";
 import { getStepDetail } from "@/lib/mock-pipeline";
+import { useT } from "@/lib/i18n";
 
 const STEP_ICONS: Record<PipelineStep["id"], React.ReactNode> = {
   ocr:      <ScanText size={14} />,
@@ -27,6 +28,7 @@ interface Props {
 }
 
 export default function ProcessingPipeline({ pipeline, onJumpToTasks, onJumpToCalendar }: Props) {
+  const { t } = useT();
   const { file, steps, status, extractedCount } = pipeline;
   const isComplete = status === "completed";
 
@@ -43,7 +45,7 @@ export default function ProcessingPipeline({ pipeline, onJumpToTasks, onJumpToCa
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <FileText size={14} color="var(--color-primary)" />
         <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>
-          正在解析{" "}
+          {t("pipe.parsing")}{" "}
           <span style={{ color: "var(--color-primary)" }}>{file.name}</span>
         </span>
         {isComplete && extractedCount !== undefined && (
@@ -57,7 +59,7 @@ export default function ProcessingPipeline({ pipeline, onJumpToTasks, onJumpToCa
               borderRadius: 10,
             }}
           >
-            提取到 {extractedCount} 条
+            {t("pipe.extracted", { n: extractedCount })}
           </span>
         )}
       </div>
@@ -78,8 +80,8 @@ export default function ProcessingPipeline({ pipeline, onJumpToTasks, onJumpToCa
             flexWrap: "wrap",
           }}
         >
-          {onJumpToTasks && <JumpBtn label="查看任务" onClick={onJumpToTasks} />}
-          {onJumpToCalendar && <JumpBtn label="查看日历" onClick={onJumpToCalendar} />}
+          {onJumpToTasks && <JumpBtn label={t("pipe.viewTasks")} onClick={onJumpToTasks} />}
+          {onJumpToCalendar && <JumpBtn label={t("pipe.viewCalendar")} onClick={onJumpToCalendar} />}
         </div>
       )}
     </div>
@@ -87,6 +89,7 @@ export default function ProcessingPipeline({ pipeline, onJumpToTasks, onJumpToCa
 }
 
 function StepRow({ step, isLast }: { step: PipelineStep; isLast: boolean }) {
+  const { t } = useT();
   const detail = getStepDetail(step.id);
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 12, position: "relative" }}>
@@ -141,7 +144,7 @@ function StepRow({ step, isLast }: { step: PipelineStep; isLast: boolean }) {
                 animation: "pipeline-pulse 1.4s ease-in-out infinite",
               }}
             >
-              进行中
+              {t("pipe.inProgress")}
             </span>
           )}
         </div>

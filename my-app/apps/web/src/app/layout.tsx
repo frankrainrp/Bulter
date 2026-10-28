@@ -22,24 +22,23 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
-  title: "Butler — 智能多模态学习管家",
-  description: "AI-powered multimodal learning hub — 让学习更智能、更高效。",
+  title: "Butler — AI Study Workspace",
+  description: "AI-powered multimodal learning workspace for tasks, calendar, notes, and study panels.",
   manifest: "/manifest.webmanifest",
   icons: { icon: "/assets/logo.png", apple: "/assets/logo.png" },
 };
 
-export const viewport = { themeColor: "#D9DFE8" };
+export const viewport = { themeColor: "#FAFAF8" };
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const app = <ToastProvider>{children}</ToastProvider>;
   return (
-    <html lang="zh-CN" className={`${inter.variable} ${cinzel.variable}`}>
-      <body>
-        <ToastProvider>{children}</ToastProvider>
-      </body>
+    <html lang="en" data-theme="paper" className={`${inter.variable} ${cinzel.variable}`}>
+      <body>{app}</body>
     </html>
   );
 }

@@ -11,6 +11,7 @@ import { AI_MODELS, type AiModelId, type AiModelMeta, getModelMeta } from "@/lib
 import { GlassButton } from "@/components/ui/Glass";
 import Portal from "@/components/ui/Portal";
 import { useUsage, formatCountdown } from "@/lib/usage";
+import { useT } from "@/lib/i18n";
 
 interface InputPodProps {
   value: string;
@@ -35,6 +36,7 @@ export default function InputPod({
   selectedModel = "deepseek-v4-flash",
   onSelectModel,
 }: InputPodProps) {
+  const { t } = useT();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [focused, setFocused] = useState(false);
@@ -129,7 +131,7 @@ export default function InputPod({
             color: "var(--color-primary)", fontSize: 13, fontWeight: 600,
             letterSpacing: 0.2,
           }}>
-            释放即可上传文档
+            {t("input.dropHint")}
           </div>
         )}
 
@@ -157,8 +159,8 @@ export default function InputPod({
             onBlur={() => setFocused(false)}
             placeholder={
               attachedFiles.length > 0
-                ? "添加备注后按 Enter 发送，AI 将解析文档并提取 DDL…"
-                : "向 Butler 提问，或拖拽 PDF / 课件到此处自动整理 DDL…"
+                ? t("input.placeholderFiles")
+                : t("input.placeholder")
             }
             rows={1}
             style={{
@@ -246,7 +248,7 @@ export default function InputPod({
             {/* 附件 */}
             <button
               id="attach-btn"
-              aria-label="附加文件"
+              aria-label={t("input.attach")}
               onClick={() => fileInputRef.current?.click()}
               style={{
                 width: 32, height: 32, borderRadius: 8,
@@ -278,7 +280,7 @@ export default function InputPod({
             {isLoading && onStop ? (
               <GlassButton
                 id="stop-btn"
-                aria-label="停止生成"
+                aria-label={t("input.stop")}
                 onClick={onStop}
                 variant="primary"
                 circle
@@ -289,7 +291,7 @@ export default function InputPod({
             ) : (
               <GlassButton
                 id="send-btn"
-                aria-label="发送消息"
+                aria-label={t("input.send")}
                 onClick={onSend}
                 disabled={!canSend}
                 variant="primary"
@@ -310,6 +312,7 @@ export default function InputPod({
 // 本时段（5h 窗口）免费额度消耗百分比，环形进度 + 中心 % + 悬浮明细。
 // 耗尽转危险色、≥80% 转琥珀。点击/悬浮 title 提示余量与回满倒计时。
 function UsageRing() {
+  const { t } = useT();
   const u = useUsage().window;
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -332,8 +335,8 @@ function UsageRing() {
 
   return (
     <div
-      title={`本时段免费额度 ¥${u.spend.toFixed(2)} / ¥${u.budget.toFixed(2)}（已用 ${pct}%）· ${reset} 后回满`}
-      aria-label={`免费额度已用 ${pct}%`}
+      title={t("usage.ringTitle", { spend: u.spend.toFixed(2), budget: u.budget.toFixed(2), pct, reset })}
+      aria-label={t("usage.ringAria", { pct })}
       style={{ width: size, height: size, position: "relative", flexShrink: 0 }}
     >
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)", display: "block" }}>
@@ -366,6 +369,7 @@ function UsageRing() {
 
 // ---- 文件 chip ----
 function FileChip({ file, onRemove }: { file: UploadedFile; onRemove: () => void }) {
+  const { t } = useT();
   const [hov, setHov] = useState(false);
   const isImage = file.mime.startsWith("image/");
   const isPdf = file.mime === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
@@ -395,7 +399,7 @@ function FileChip({ file, onRemove }: { file: UploadedFile; onRemove: () => void
         {formatSize(file.size)}
       </span>
       <button
-        aria-label="移除附件"
+        aria-label={t("input.removeAttachment")}
         onClick={onRemove}
         style={{
           width: 18, height: 18, borderRadius: 4, border: "none",

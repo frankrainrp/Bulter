@@ -9,6 +9,7 @@ import React from "react";
 import { Plus, FileText, Pin } from "lucide-react";
 import type { Note } from "@/lib/types";
 import { RailPrimaryBtn, RailGroupTitle, RailItem } from "./LeftRail";
+import { useT } from "@/lib/i18n";
 
 interface NotesRailProps {
   notes: Note[];
@@ -16,6 +17,7 @@ interface NotesRailProps {
 }
 
 export default function NotesRail({ notes, onCreate }: NotesRailProps) {
+  const { t } = useT();
   const pinned = notes.filter((n) => n.pinned);
   const total = notes.length;
   return (
@@ -51,9 +53,9 @@ export default function NotesRail({ notes, onCreate }: NotesRailProps) {
           lineHeight: 1.4,
         }}
       >
-        浏览器内 · Phase 3
+        {t("rail.notes.local")}
         <br />
-        <span style={{ color: "var(--color-text-muted)" }}>接 Tauri 后写本地 Vault</span>
+        <span style={{ color: "var(--color-text-muted)" }}>{t("rail.notes.placeholder")}</span>
       </div>
     </>
   );

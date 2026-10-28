@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Search, ListChecks, FileText, MessageSquare } from "lucide-react";
 import type { DdlItem, Note, ChatMessage, NavId } from "@/lib/types";
 import { EmptySearch } from "@/components/EmptyIllustrations";
+import { useT } from "@/lib/i18n";
 
 interface SearchResult {
   kind: "task" | "note" | "message";
@@ -34,6 +35,7 @@ interface Props {
 const MAX_RESULTS = 24;
 
 export default function GlobalSearch({ ddls, notes, messages, onJump, isMobile = false }: Props) {
+  const { t } = useT();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -68,7 +70,7 @@ export default function GlobalSearch({ ddls, notes, messages, onJump, isMobile =
           kind: "task",
           id: d.id,
           title: d.taskName,
-          preview: `${d.dueDate || "待定"}${d.dueTime ? " " + d.dueTime : ""}${d.description ? " · " + d.description : ""}`.slice(0, 80),
+          preview: `${d.dueDate || t("tasks.date.tbd")}${d.dueTime ? " " + d.dueTime : ""}${d.description ? " · " + d.description : ""}`.slice(0, 80),
           navTarget: "tasks",
           refId: d.id,
         });
@@ -81,7 +83,7 @@ export default function GlobalSearch({ ddls, notes, messages, onJump, isMobile =
         all.push({
           kind: "note",
           id: n.id,
-          title: n.title || "(无标题)",
+          title: n.title || t("td.note.untitled"),
           preview: (n.content || "").replace(/[#*`>\-_\[\]()]/g, "").slice(0, 80),
           navTarget: "notes",
           refId: n.id,
@@ -96,7 +98,7 @@ export default function GlobalSearch({ ddls, notes, messages, onJump, isMobile =
         all.push({
           kind: "message",
           id: m.id,
-          title: m.role === "user" ? "我说" : "Butler 说",
+          title: m.role === "user" ? t("search.youSaid") : t("search.butlerSaid"),
           preview: m.content.slice(0, 80),
           navTarget: "chat",
           refId: m.sessionId,
@@ -105,7 +107,7 @@ export default function GlobalSearch({ ddls, notes, messages, onJump, isMobile =
     }
 
     return all.slice(0, MAX_RESULTS);
-  }, [query, ddls, notes, messages]);
+  }, [query, ddls, notes, messages, t]);
 
   const handleResultClick = (r: SearchResult) => {
     onJump(r.navTarget, r.refId);
@@ -181,24 +183,24 @@ export default function GlobalSearch({ ddls, notes, messages, onJump, isMobile =
               }}>
                 {/* [056] 插画 */}
                 <div style={{ marginBottom: 6 }}><EmptySearch size={100} /></div>
-                没有匹配的内容
+                {t("search.noMatch")}
               </div>
             ) : (
               <>
                 <ResultGroup
-                  label="任务"
+                  label={t("nav.tasks")}
                   icon={<ListChecks size={11} />}
                   items={results.filter((r) => r.kind === "task")}
                   onClick={handleResultClick}
                 />
                 <ResultGroup
-                  label="笔记"
+                  label={t("nav.notes")}
                   icon={<FileText size={11} />}
                   items={results.filter((r) => r.kind === "note")}
                   onClick={handleResultClick}
                 />
                 <ResultGroup
-                  label="对话"
+                  label={t("nav.chat")}
                   icon={<MessageSquare size={11} />}
                   items={results.filter((r) => r.kind === "message")}
                   onClick={handleResultClick}

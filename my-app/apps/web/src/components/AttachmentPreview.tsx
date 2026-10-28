@@ -14,6 +14,7 @@
 import React, { useEffect, useState } from "react";
 import { X, ExternalLink, Copy, Download, FolderOpen } from "lucide-react";
 import type { DdlAttachment } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   attachment: DdlAttachment;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function AttachmentPreview({ attachment, onClose }: Props) {
+  const { t } = useT();
   const [blobInfo, setBlobInfo] = useState<{ url: string; mime: string; name: string } | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
 
@@ -40,7 +42,7 @@ export default function AttachmentPreview({ attachment, onClose }: Props) {
           const info = await getBlobUrl(attachment.ref);
           if (!active) return;
           if (info) { url = info.url; setBlobInfo(info); }
-          else setLoadErr("附件文件已丢失（IndexedDB 中找不到）");
+          else setLoadErr(t("att.lost"));
         } catch (e) {
           if (active) setLoadErr((e as Error).message);
         }
@@ -87,7 +89,7 @@ export default function AttachmentPreview({ attachment, onClose }: Props) {
               {attachment.ref}
             </p>
           </div>
-          <button onClick={onClose} aria-label="关闭" style={{
+          <button onClick={onClose} aria-label={t("common.close")} style={{
             width: 32, height: 32, borderRadius: 8, border: "none",
             background: "transparent", cursor: "pointer", color: "var(--color-text-muted)",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -115,10 +117,11 @@ export default function AttachmentPreview({ attachment, onClose }: Props) {
 // ---- 子视图 ----
 
 function UrlView({ ref_ }: { ref_: string }) {
+  const { t } = useT();
   return (
     <div style={{ padding: 40, textAlign: "center" }}>
       <ExternalLink size={36} color="var(--color-primary)" />
-      <p style={{ fontSize: 14, color: "var(--color-text)", margin: "16px 0 6px" }}>外部链接附件</p>
+      <p style={{ fontSize: 14, color: "var(--color-text)", margin: "16px 0 6px" }}>{t("att.external")}</p>
       <p style={{ fontSize: 12, color: "var(--color-text-faint)", margin: "0 0 20px", wordBreak: "break-all" }}>{ref_}</p>
       <a href={ref_} target="_blank" rel="noopener noreferrer" style={{
         display: "inline-flex", alignItems: "center", gap: 6,
@@ -127,13 +130,14 @@ function UrlView({ ref_ }: { ref_: string }) {
         color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
         boxShadow: "var(--shadow-card-hover)",
       }}>
-        <ExternalLink size={14} /> 在新窗口打开
+        <ExternalLink size={14} /> {t("att.openNew")}
       </a>
     </div>
   );
 }
 
 function FilepathView({ path }: { path: string }) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -145,7 +149,7 @@ function FilepathView({ path }: { path: string }) {
   return (
     <div style={{ padding: 40, textAlign: "center" }}>
       <FolderOpen size={36} color="var(--color-success)" />
-      <p style={{ fontSize: 14, color: "var(--color-text)", margin: "16px 0 6px" }}>本地文件路径</p>
+      <p style={{ fontSize: 14, color: "var(--color-text)", margin: "16px 0 6px" }}>{t("att.localPath")}</p>
       <p style={{
         fontSize: 12, color: "var(--color-text)", margin: "0 0 8px",
         wordBreak: "break-all", fontFamily: "ui-monospace, monospace",
@@ -154,7 +158,7 @@ function FilepathView({ path }: { path: string }) {
         border: "1px solid var(--color-border-soft)",
       }}>{path}</p>
       <p style={{ fontSize: 11, color: "var(--color-text-faint)", margin: "0 0 20px" }}>
-        浏览器无法直接打开本地路径；Phase 3 桌面壳上线后可一键"在文件管理器中显示"
+        {t("att.localHint")}
       </p>
       <button onClick={copy} style={{
         display: "inline-flex", alignItems: "center", gap: 6,
@@ -165,13 +169,14 @@ function FilepathView({ path }: { path: string }) {
         fontSize: 13, fontWeight: 500,
         cursor: "pointer", fontFamily: "inherit",
       }}>
-        <Copy size={14} /> {copied ? "已复制" : "复制路径"}
+        <Copy size={14} /> {copied ? t("chat.copied") : t("att.copyPath")}
       </button>
     </div>
   );
 }
 
 function BlobView({ info }: { info: { url: string; mime: string; name: string } }) {
+  const { t } = useT();
   const isImg = info.mime.startsWith("image/");
   const isPdf = info.mime === "application/pdf" || info.name.toLowerCase().endsWith(".pdf");
 
@@ -184,9 +189,13 @@ function BlobView({ info }: { info: { url: string; mime: string; name: string } 
   }
   if (isPdf) {
     return (
+      // SEC-15：上传文件是不可信内容（可能是伪装成 .pdf 的 HTML）。沙箱化 —— 不给
+      // allow-same-origin / allow-scripts，即使是 HTML 也不会在应用源里执行脚本；
+      // 浏览器原生 PDF 查看器在此沙箱下仍可正常渲染。
       <iframe
         src={info.url}
         title={info.name}
+        sandbox=""
         style={{ width: "100%", height: "70vh", border: "none", background: "var(--color-surface)" }}
       />
     );
@@ -204,14 +213,15 @@ function BlobView({ info }: { info: { url: string; mime: string; name: string } 
         color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
         boxShadow: "var(--shadow-card-hover)",
       }}>
-        <Download size={14} /> 下载
+        <Download size={14} /> {t("att.download")}
       </a>
     </div>
   );
 }
 
 function LoadingView() {
-  return <div style={{ padding: 60, textAlign: "center", color: "var(--color-text-faint)", fontSize: 13 }}>加载中…</div>;
+  const { t } = useT();
+  return <div style={{ padding: 60, textAlign: "center", color: "var(--color-text-faint)", fontSize: 13 }}>{t("att.loading")}</div>;
 }
 
 function ErrorView({ msg }: { msg: string }) {

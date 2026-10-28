@@ -8,6 +8,7 @@
 
 import { OpenAI } from "openai";
 import { validateSpec, type DataSource, type Block } from "@/lib/panel-schema";
+import { clampText, INPUT_LIMITS, rateLimited, safeError } from "@/lib/api-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,12 +44,14 @@ const SYSTEM = `你是数据源配置器。把用户对「想要的数据」的�
 5. id 用短英文；只输出 JSON 对象本身。`;
 
 export async function POST(req: Request) {
+  const limited = rateLimited(req); // SEC-05
+  if (limited) return limited;
   let prompt = "";
-  try { prompt = ((await req.json())?.prompt ?? "").trim(); } catch { /* */ }
+  try { prompt = clampText(((await req.json())?.prompt ?? "").trim(), INPUT_LIMITS.maxPromptChars); } catch { /* */ }
   if (!prompt) return Response.json({ ok: false, error: "缺少 prompt" }, { status: 400 });
   if (!process.env.DEEPSEEK_API_KEY) return Response.json({ ok: false, error: "未配置 DEEPSEEK_API_KEY" }, { status: 500 });
 
-  const openai = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1" });
+  const openai = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: "https://api.deepseek.com" });
   try {
     const c = await openai.chat.completions.create({
       model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
@@ -71,6 +74,6 @@ export async function POST(req: Request) {
     if (v.ok !== true) return Response.json({ ok: false, error: "生成的源不合法：" + v.error, raw }, { status: 200 });
     return Response.json({ ok: true, source: v.spec.sources[0], blocks: v.spec.blocks, usage: c.usage });
   } catch (err) {
-    return Response.json({ ok: false, error: (err as Error).message }, { status: 200 });
+    return Response.json({ ok: false, error: safeError(err, "数据源配置失败，请稍后重试") }, { status: 200 });
   }
 }

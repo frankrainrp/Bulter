@@ -2,9 +2,14 @@
   "name": "smart-learning-hub",
   "private": true,
   "scripts": {
-    "build": "turbo run build",
+    "build": "corepack pnpm --filter @smart-hub/web build",
+    "build:all": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "typecheck": "turbo run lint",
+    "test": "node --test scripts/*.test.mjs",
+    "ci:validate": "node scripts/ci-validate.mjs",
+    "docker:build": "docker build -t butler-c270-final .",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {

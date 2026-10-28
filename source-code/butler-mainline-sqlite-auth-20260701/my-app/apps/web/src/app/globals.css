@@ -1,0 +1,813 @@
+/* [TEST] anti-polish 手绘字体（拉丁；中文自动回落到圆体 sans）。@import 必须在最前。 */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Gaegu:wght@300;400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   全局设计系统 — Retro-Future Butler（复古未来 + 漫画 + 管家）
+   v2 视觉地基 [058]：奶油羊皮纸底 · espresso 墨水 · 黄铜点缀
+   · 衬线展示字 · 苹果玻璃面板 · 圆润大色块
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* ---- Primary：钢蓝（主操作/激活）---- */
+    --color-primary: #4A7C99;
+    --color-primary-hover: #3D6A84;
+    --color-primary-soft: #DCEBEA;
+    /* ---- Accent：青绿松石（次级 tint）---- */
+    --color-accent: #1FA39A;
+    --butler-gold: #46CFC9; /* 亮青绿高光，替代管家金 */
+    --color-accent-hover: #18897F;
+    --color-accent-soft: #D6F0ED;
+    /* ---- 语义色（iOS 系统色）---- */
+    --color-success: #34C759;
+    --color-warning: #FF9500;
+    --color-danger: #FF3B30;
+    --color-info: #5AC8FA;
+    /* ---- Text（iOS label 灰阶）---- */
+    --color-text: #1C1C1E;
+    --color-text-muted: #6C6C70;
+    --color-text-faint: #AEAEB2;
+    /* ---- Surfaces（柔和灰蓝底 + 微蓝白卡，去掉刺眼纯白）---- */
+    --color-bg: #DBE7E6;          /* 冷青灰页底：柔和不刺激 */
+    --color-surface: #EFF6F5;     /* 微青白卡面替代纯白，降眩光 */
+    --color-border: #C3D5D3;      /* 偏青描边 */
+    --color-border-soft: #D7E4E2;
+
+    /* ---- 玻璃面板（青灰磨砂，降饱和更柔和）---- */
+    --glass-bg: rgba(239, 246, 245, 0.78);
+    --glass-bg-strong: rgba(242, 248, 247, 0.90);
+    --glass-border: rgba(255, 255, 255, 0.55);
+    --glass-blur: blur(20px) saturate(1.25);
+
+    /* ---- Radius（iOS 大圆角）---- */
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-card: 22px;
+    --radius-modal: 28px;
+    --radius-pill: 999px;
+
+    /* ---- 阴影（中性黑，柔和悬浮）---- */
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-card-hover: 0 10px 34px rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.05);
+    --shadow-bubble: 0 4px 16px rgba(0, 0, 0, 0.06);
+    --shadow-modal: 0 24px 70px rgba(0, 0, 0, 0.18);
+    --shadow-drawer: 0 12px 36px rgba(0, 0, 0, 0.14);
+
+    /* ---- 代码块（iOS 深炭）---- */
+    --color-code-bg: #1C1C1E;
+    --color-code-text: #F2F2F7;
+
+    /* ---- 覆盖层 ---- */
+    --color-overlay: rgba(0, 0, 0, 0.40);
+    --color-overlay-soft: rgba(0, 0, 0, 0.24);
+
+    /* ---- 语义淡底 ---- */
+    --color-success-soft: #E3F9E5;
+    --color-success-strong: #1B7F30;
+    --color-warning-soft: #FFF0DB;
+    --color-danger-soft: #FFE3E1;
+
+    /* 字体（iOS 无衬线，SF 优先）*/
+    --font-base: 14px;
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-inter), "Inter", "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-inter), "Inter", "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
+
+    /* 常态（白）模式：液态玻璃网格底（深色细线浮在浅灰底上）*/
+    --grid-line: rgba(0, 0, 0, 0.05);
+    --bg-grid:
+      linear-gradient(0deg, transparent 24%, var(--grid-line) 25%, var(--grid-line) 26%, transparent 27%, transparent 74%, var(--grid-line) 75%, var(--grid-line) 76%, transparent 77%, transparent),
+      linear-gradient(90deg, transparent 24%, var(--grid-line) 25%, var(--grid-line) 26%, transparent 27%, transparent 74%, var(--grid-line) 75%, var(--grid-line) 76%, transparent 77%, transparent);
+    /* 顶层微光（极淡森林绿光团）*/
+    --bg-glow:
+      radial-gradient(60% 50% at 12% 4%, rgba(70, 207, 201, 0.07), transparent 60%),
+      radial-gradient(55% 45% at 92% 0%, rgba(74, 124, 153, 0.06), transparent 56%),
+      radial-gradient(60% 60% at 100% 100%, rgba(120, 220, 212, 0.05), transparent 60%);
+    /* 半调层（仅复古模式用，亮/暗关闭）*/
+    --bg-halftone: none;
+    --bg-halftone-size: 0 0;
+
+    /* 液态玻璃高光描边（伪元素折射感）*/
+    --glass-highlight: inset 1px 1px 0 rgba(255, 255, 255, 0.85),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.03);
+    --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, transparent 32%, transparent 70%, rgba(255, 255, 255, 0.3) 100%);
+  }
+
+  /* 暗色 = 森林墨绿炭（深炭近黑 + 森林绿，非纯黑）*/
+  html[data-theme="dark"] {
+    --color-primary: #3E7591;        /* 钢蓝（按钮/主操作）*/
+    --color-primary-hover: #4A86A4;
+    --color-primary-soft: #15282E;
+    --color-accent: #4FD0C8;         /* 亮青绿松石（次级）*/
+    --butler-gold: #5FD6CE; /* 亮青绿高光 */
+    --color-accent-hover: #6BDAD3;
+    --color-accent-soft: #123330;
+    --color-success: #34D17F;
+    --color-warning: #FF9F0A;
+    --color-danger: #FF453A;
+    --color-info: #5BC8C2;
+    --color-text: #EAF3F1;
+    --color-text-muted: #93A5A2;
+    --color-text-faint: #61736F;
+    /* 更深的纯色底（青墨深炭）+ 面板更亮一档拉开层次 */
+    --color-bg: #121A1A;
+    --color-surface: #1E2B2A;
+    --color-border: #324140;
+    --color-border-soft: #28302F;
+
+    --glass-bg: rgba(30, 43, 42, 0.62);
+    --glass-bg-strong: rgba(34, 47, 46, 0.78);
+    --glass-border: rgba(255, 255, 255, 0.10);
+    --glass-blur: blur(10px) saturate(1.3);
+
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --shadow-card-hover: 0 8px 30px rgba(0, 0, 0, 0.6);
+    --shadow-bubble: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-modal: 0 24px 70px rgba(0, 0, 0, 0.7);
+    --shadow-drawer: 0 12px 36px rgba(0, 0, 0, 0.6);
+
+    --color-code-bg: #111813;
+    --color-code-text: #E5E5EA;
+
+    --color-overlay: rgba(0, 0, 0, 0.6);
+    --color-overlay-soft: rgba(0, 0, 0, 0.4);
+
+    --color-success-soft: #0E2E16;
+    --color-success-strong: #34D17F;
+    --color-warning-soft: #2E2305;
+    --color-danger-soft: #2E0F0D;
+
+    /* 纯色底（去网格/光团）+ 极淡圆点花纹 */
+    --grid-line: transparent;
+    --bg-grid: none;
+    --bg-glow: none;
+    --bg-halftone: radial-gradient(circle at center, rgba(255, 255, 255, 0.022) 1px, transparent 1.5px);
+    --bg-halftone-size: 22px 22px;
+
+    --glass-highlight: inset 1px 1px 0 rgba(255, 255, 255, 0.1),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.3);
+    --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, transparent 34%, transparent 72%, rgba(255, 255, 255, 0.06) 100%);
+  }
+
+  /* ============================================================
+     复古手绘模式（第三主题）— 羊皮纸 + 墨绿面板 + 黄铜金 + 衬线
+     无素材地基：配色 / 纸纹 / 半调 / 衬线字。手绘边框 + 插画素材
+     由用户提供后填入下方 --retro-* 素材槽（默认 none / 占位）。
+     ============================================================ */
+  html[data-theme="retro"] {
+    /* ---- 主色：墨绿（面板/主操作）---- */
+    --color-primary: #2D4A3E;
+    --color-primary-hover: #3A5C4D;
+    --color-primary-soft: #DCE6DD;
+    /* ---- Accent：黄铜金（描边/装饰高光）---- */
+    --color-accent: #B08D57;
+    --butler-gold: #B08D57; /* 复古复用黄铜金 */
+    --color-accent-hover: #C29B61;
+    --color-accent-soft: #EFE4CB;
+    /* ---- 语义色（复古去饱和）---- */
+    --color-success: #4E7A4F;
+    --color-warning: #C2893B;
+    --color-danger: #B04A38;
+    --color-info: #466F7E;
+    /* ---- Text（墨黑 / sepia）---- */
+    --color-text: #2A2418;
+    --color-text-muted: #6A5E48;
+    --color-text-faint: #9C8E72;
+    /* ---- Surfaces（羊皮纸）---- */
+    --color-bg: #ECE3CF;
+    --color-surface: #F6EEDC;
+    --color-border: #C9B894;
+    --color-border-soft: #DCD0B4;
+
+    /* ---- 玻璃面板：复古纸面（不透明、暖白、轻投影）---- */
+    --glass-bg: rgba(246, 238, 220, 0.92);
+    --glass-bg-strong: rgba(246, 238, 220, 0.97);
+    --glass-border: rgba(176, 141, 87, 0.45);
+    --glass-blur: blur(2px) saturate(1);
+
+    /* ---- Radius（手绘框配略小圆角）---- */
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-card: 14px;
+    --radius-modal: 16px;
+    --radius-pill: 999px;
+
+    /* ---- 阴影（暖棕墨染，柔和）---- */
+    --shadow-card: 0 1px 2px rgba(58, 46, 24, 0.10);
+    --shadow-card-hover: 0 6px 22px rgba(58, 46, 24, 0.16), 0 2px 6px rgba(58, 46, 24, 0.08);
+    --shadow-bubble: 0 4px 14px rgba(58, 46, 24, 0.14);
+    --shadow-modal: 0 20px 60px rgba(44, 33, 20, 0.30);
+    --shadow-drawer: 0 12px 32px rgba(44, 33, 20, 0.22);
+
+    --color-code-bg: #2A2418;
+    --color-code-text: #F2E9D6;
+    --color-overlay: rgba(44, 33, 20, 0.46);
+    --color-overlay-soft: rgba(44, 33, 20, 0.28);
+    --color-success-soft: #D8E6D4;
+    --color-success-strong: #2F5430;
+    --color-warning-soft: #F4E6C5;
+    --color-danger-soft: #F0DAD1;
+
+    /* 衬线展示字（英文小型大写 Cinzel + 中文宋体）+ 衬线正文 */
+    --font-display: var(--font-cinzel), "Cinzel", "Songti SC", "Noto Serif SC", "Georgia", serif;
+    --font-body: "Songti SC", "Noto Serif SC", "Georgia", var(--font-inter), serif;
+
+    /* 纸纹 + 半调网点底（无素材也有复古质感）*/
+    --grid-line: transparent;
+    --bg-grid: none;
+    --bg-glow:
+      radial-gradient(60% 50% at 12% 6%, rgba(176, 141, 87, 0.10), transparent 60%),
+      radial-gradient(55% 45% at 92% 4%, rgba(45, 74, 62, 0.08), transparent 58%),
+      repeating-linear-gradient(0deg, rgba(58, 46, 24, 0.02) 0 1px, transparent 1px 3px);
+    /* 半调网点（独立平铺层，size 见 body 规则）*/
+    --bg-halftone: radial-gradient(circle, rgba(58, 46, 24, 0.11) 0.8px, transparent 1.1px);
+    --bg-halftone-size: 7px 7px;
+
+    --glass-highlight: inset 1px 1px 0 rgba(255, 255, 255, 0.55),
+      inset -1px -1px 0 rgba(58, 46, 24, 0.06);
+    --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, transparent 34%, transparent 72%, rgba(255, 255, 255, 0.2) 100%);
+
+    /* ---- 素材槽（2026-05-30 通过 ChatGPT/DALL-E 生成接入；都是黑墨线白底 PNG，
+           用 mix-blend-mode:multiply 让白底融入羊皮纸）----
+       --retro-frame:     手绘墨线装饰边框（边框/卡片的 border-image 或装饰背景）
+       --retro-corner:    单角飘带角花（可旋转贴四角）
+       --retro-banner:    标题卷轴横幅（标题段背景）
+       --retro-skyline:   左下角城市天际线
+       --retro-deskware:  右下角钢笔+墨水瓶
+       --retro-butler:    管家端盘线描立绘（toast/管家肖像）
+    */
+    --retro-frame: url('/assets/retro/frame.png');
+    --retro-corner: url('/assets/retro/corner.png');
+    --retro-banner: url('/assets/retro/banner.png');
+    --retro-skyline: url('/assets/retro/skyline.png');
+    --retro-deskware: url('/assets/retro/deskware.png');
+    --retro-butler: url('/assets/retro/butler.png');
+  }
+
+  /* ---- 复古主题装饰：放进 main 主面板内部，夹在"玻璃面之上 / 内容文字之下" ----
+     关键层级（main 的 stacking context 内，从底到顶）：
+       1. main 玻璃背景 + 边框
+       2. **::before/::after 装饰（z-index:-1）** ← 在玻璃面上，清晰可见
+       3. main 的子内容（ChatCanvas/TasksPanel… 默认 static，永远在装饰之上）
+     于是装饰是"纸面内衬纹理"，用户要看的消息/任务始终压在装饰上方，绝不被盖。
+     用 main::before/::after（不是 body fixed）→ 避开 main 的 backdrop-filter 把背景装饰
+     采样到玻璃面的问题。pointer-events:none 不挡交互；multiply 让白底融入羊皮纸。 */
+  html[data-theme="retro"] .retro-railhost::after,
+  html[data-theme="retro"] main::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.4;
+    background-repeat: no-repeat;
+    background-size: contain;
+    mix-blend-mode: multiply;
+  }
+  /* 城市天际线：贴左侧窄栏底部（最初设计：宽≈左栏 220px） */
+  html[data-theme="retro"] .retro-railhost::after {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 200px;
+    opacity: 0.55;
+    background-position: bottom center;
+    background-image: var(--retro-skyline);
+  }
+  /* 钢笔 + 墨水瓶：主面板右下角 */
+  html[data-theme="retro"] main::after {
+    right: 20px;
+    bottom: 20px;
+    width: 168px;
+    height: 168px;
+    background-position: center;
+    background-image: var(--retro-deskware);
+  }
+
+
+  /* 字体档位 */
+  html[data-font-size="sm"] { --font-base: 13px; }
+  html[data-font-size="lg"] { --font-base: 16px; }
+
+  * {
+    box-sizing: border-box;
+    text-decoration: none;
+  }
+
+  /* 管家白手套光标：可点击元素变白手套指向（disabled/文本输入框除外）。
+     !important 覆盖 @layer components 里 .pill-nav-item/.glass-btn 的 cursor:pointer */
+  button:not(:disabled), a, [role="button"], .glass-btn, .pill-nav-item, summary, select, label[for] {
+    cursor: url('/assets/cursor-glove.svg') 13 4, pointer !important;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* [066] 背景放 html（而非 body）：body 透明，让 WallpaperLayer 的
+     fixed z-index:-1 壁纸层能盖在 html 网格底之上、玻璃胶囊之下显示出来。
+     无壁纸时这套网格/光晕底照常露出。 */
+  html {
+    background-color: var(--color-bg);
+    background-image: var(--bg-glow), var(--bg-halftone), var(--bg-grid);
+    background-size: 100% 100%, var(--bg-halftone-size, 0 0), 55px 55px;
+    background-attachment: fixed;
+  }
+
+  body {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    font-size: var(--font-base);
+    color: var(--color-text);
+    background: transparent;
+  }
+
+  /* 衬线展示字（标题 / 管家声线 / 品牌字）*/
+  .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: 0.01em;
+  }
+
+  /* 黑夜模式：黑色 logo / 管家立绘自动反色成白（仅内置黑白素材）*/
+  html[data-theme="dark"] .app-logo { filter: invert(1) brightness(1.15); }
+  html[data-theme="dark"] .butler-figure { filter: invert(1); }
+}
+
+@layer components {
+  /* ---- 消息流滚动条 ---- */
+  .message-stream {
+    scroll-behavior: smooth;
+  }
+  .message-stream::-webkit-scrollbar { width: 5px; }
+  .message-stream::-webkit-scrollbar-track { background: transparent; }
+  .message-stream::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    border-radius: 3px;
+  }
+
+  /* ---- 文字可选 ---- */
+  .selectable {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+
+  /* ---- 苹果式玻璃面板工具类 ---- */
+  .glass {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+  }
+  .glass-strong {
+    background: var(--glass-bg-strong);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+  }
+
+  /* ---- 液态玻璃大模块面板（折射高光 + 柔和悬浮）---- */
+  .liquid-glass {
+    position: relative;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card-hover), var(--glass-highlight);
+  }
+
+  /* ============================================================
+     液态玻璃按钮（样例「纯CSS液态玻璃」.box 精髓 → 奶油适配）
+     用法：<button class="glass-btn">  圆形：加 .glass-btn-circle
+           实色：.glass-btn-primary / .glass-btn-accent
+     ============================================================ */
+  .glass-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg-strong);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow:
+      0 4px 10px rgba(56, 41, 26, 0.10),
+      0 2px 0 rgba(56, 41, 26, 0.04),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.7);
+    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.18s ease, background 0.18s ease, filter 0.18s ease;
+  }
+  /* 斜向折射高光 */
+  .glass-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: var(--glass-sheen);
+    opacity: 0.7;
+  }
+  .glass-btn:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 9px 20px rgba(56, 41, 26, 0.16),
+      0 2px 0 rgba(56, 41, 26, 0.05),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.82);
+  }
+  .glass-btn:active {
+    transform: translateY(1px) scale(0.97);
+  }
+  .glass-btn:disabled,
+  .glass-btn[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+    box-shadow: inset 0 0 0 1px var(--color-border);
+  }
+  .glass-btn:disabled::after,
+  .glass-btn[aria-disabled="true"]::after {
+    opacity: 0.25;
+  }
+  /* 圆形图标钮 */
+  .glass-btn-circle {
+    border-radius: 50%;
+    padding: 0;
+    aspect-ratio: 1 / 1;
+  }
+
+  /* 实色变体：iOS 蓝 */
+  .glass-btn-primary {
+    color: #fff;
+    background: linear-gradient(150deg, var(--color-primary-hover), var(--color-primary));
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    box-shadow:
+      0 6px 16px rgba(56, 41, 26, 0.26),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.16);
+  }
+  .glass-btn-primary::after {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 38%);
+  }
+  .glass-btn-primary:hover {
+    filter: brightness(1.07);
+    box-shadow:
+      0 10px 22px rgba(56, 41, 26, 0.32),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.26);
+  }
+
+  /* 实色变体：靛蓝 accent */
+  .glass-btn-accent {
+    color: #fff;
+    background: linear-gradient(150deg, var(--color-accent-hover), var(--color-accent));
+    border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+    box-shadow:
+      0 6px 16px rgba(168, 122, 60, 0.32),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.12);
+  }
+  .glass-btn-accent::after {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, transparent 40%);
+  }
+  .glass-btn-accent:hover {
+    filter: brightness(1.05);
+  }
+
+  /* ============================================================
+     拟物胶囊导航条（样例「导航栏对比 #B」→ 奶油/espresso 适配）
+     ============================================================ */
+  .pill-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--radius-pill);
+    background: var(--glass-bg-strong);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      0 4px 10px rgba(56, 41, 26, 0.12),
+      0 2px 0 rgba(56, 41, 26, 0.05),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.62);
+  }
+  .pill-nav-item {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 32px;
+    padding: 0 16px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+  }
+  .pill-nav-item:hover {
+    background: var(--color-primary-soft);
+    color: var(--color-text);
+  }
+  .pill-nav-item:active {
+    transform: scale(0.95);
+  }
+  .pill-nav-item.active {
+    color: #fff;
+    background: linear-gradient(150deg, var(--color-primary-hover), var(--color-primary));
+    box-shadow:
+      0 2px 10px color-mix(in srgb, var(--color-primary) 45%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  .pill-nav-item.active:hover {
+    color: #fff;
+    filter: brightness(1.06);
+  }
+
+  /* ---- 漫画对话气泡（尖角尾巴 + 弹入）---- */
+  /* 用法：外层 .comic-bubble，尾巴用 ::before/::after 画三角 */
+  .comic-bubble {
+    position: relative;
+    animation: bubble-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  /* 左下尾巴（管家发话，尾巴指向左侧管家）*/
+  .comic-bubble.tail-left::before {
+    content: "";
+    position: absolute;
+    left: -11px;
+    bottom: 16px;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 8px 12px 8px 0;
+    border-color: transparent var(--bubble-border, var(--color-primary)) transparent transparent;
+  }
+  .comic-bubble.tail-left::after {
+    content: "";
+    position: absolute;
+    left: -7px;
+    bottom: 18px;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 6px 9px 6px 0;
+    border-color: transparent var(--bubble-fill, var(--color-bg)) transparent transparent;
+  }
+  /* 右下尾巴（用户发话）*/
+  .comic-bubble.tail-right::before {
+    content: "";
+    position: absolute;
+    right: -10px;
+    bottom: 14px;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 8px 0 8px 12px;
+    border-color: transparent transparent transparent var(--bubble-fill, var(--color-primary-soft));
+  }
+
+  /* ---- B3 全局搜索跳转后高亮闪烁 ---- */
+  .task-row-flash,
+  .note-flash {
+    animation: search-flash 2s ease-out 1;
+  }
+
+  @keyframes search-flash {
+    0%   { background: rgba(70, 207, 201, 0.32); box-shadow: inset 0 0 0 2px var(--color-accent); }
+    50%  { background: rgba(70, 207, 201, 0.16); box-shadow: inset 0 0 0 2px rgba(70, 207, 201, 0.5); }
+    100% { background: transparent; box-shadow: none; }
+  }
+
+  @keyframes bubble-pop {
+    from { transform: scale(0.95) translateY(4px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  /* ============================================================
+     可复用动效（与音效配对：.fx-pop 配 task-complete 铃 / .fx-shake 配 error）
+     ============================================================ */
+  /* 完成弹跳（勾选任务，配服务铃）*/
+  .fx-pop { animation: fx-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes fx-pop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.32) rotate(-4deg); }
+    60%  { transform: scale(0.92); }
+    100% { transform: scale(1); }
+  }
+  /* 主色扩散光环（"铃响了"的视觉回响，绝对定位叠在元素上）*/
+  .fx-ring { position: relative; }
+  .fx-ring::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid var(--color-primary);
+    animation: fx-ring 0.55s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes fx-ring {
+    0%   { opacity: 0.6; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.8); }
+  }
+  /* 错误抖动（配 toast-error）*/
+  .fx-shake { animation: fx-shake 0.4s ease-in-out; }
+  @keyframes fx-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+  }
+
+  /* 无障碍：尊重系统「减少动态效果」——关停所有动画/过渡 */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* 手机端体验优化：防 iOS 双击放大 / 去点击高亮蓝框 / 平滑触摸滚动 / 消点击延迟 */
+  @media (max-width: 768px) {
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body { -webkit-tap-highlight-color: transparent; }
+    main, .message-stream, aside { -webkit-overflow-scrolling: touch; }
+    button, [role="button"], a { touch-action: manipulation; }
+  }
+}
+
+/* ============================================================
+   Anti-Polish / Raw Aesthetic（反精致 · 原生粗粝美学）= 默认主题
+   ui-ux-pro-max 风格库 #40。data-theme="paper" 全局生效。
+   纸白底 + 墨黑手绘描边 + 牛皮纸棕点缀 + 手写字 + 硬偏移投影。
+   做法：重映射设计 token（子组件 inline var() 自动跟随）+ 玻璃拍平
+   + 手绘抖动边框 + 纸纹 + 去平滑过渡。
+   原「墨绿玻璃」保留为 data-theme="dark"（偏好设置里的「简单」主题）。
+   放在 @layer 之外 → 优先级高于分层默认，配 !important 压过 inline。
+   ============================================================ */
+html[data-theme="paper"] {
+  /* —— 调色板 —— */
+  --color-primary: #1A1A1A;        /* 主操作 = 墨水黑 */
+  --color-primary-hover: #000000;
+  --color-primary-soft: #EFE6D2;   /* 牛皮纸淡底 */
+  --color-accent: #C4A77D;         /* 牛皮纸棕 */
+  --butler-gold: #C4A77D;
+  --color-accent-hover: #B5966A;
+  --color-accent-soft: #EFE6D2;
+  --color-success: #4E7A4F;
+  --color-warning: #C2893B;
+  --color-danger: #B04A38;
+  --color-info: #466F7E;
+  --color-text: #1A1A1A;           /* 墨黑 */
+  --color-text-muted: #4A4A4A;     /* 铅笔灰 */
+  --color-text-faint: #8C8575;     /* 牛皮纸灰 */
+  --color-bg: #FAFAF8;             /* 纸白 */
+  --color-surface: #FFFDF6;        /* 微暖纸卡 */
+  --color-border: #1A1A1A;         /* 马克墨黑描边 */
+  --color-border-soft: #C7C0AE;    /* 铅笔淡线 */
+
+  /* —— 纸面（不透明、无模糊；玻璃工具类在下方拍平）—— */
+  --glass-bg: #FFFDF6;
+  --glass-bg-strong: #FFFEFA;
+  --glass-border: #1A1A1A;
+  --glass-blur: none;
+  --glass-highlight: none;
+  --glass-sheen: none;
+
+  /* —— 有机不规则圆角（手画感，全局生效）—— */
+  --radius-sm: 8px 5px 9px 6px / 6px 9px 5px 8px;
+  --radius-md: 11px 7px 13px 8px / 8px 13px 7px 11px;
+  --radius-card: 16px 22px 18px 24px / 22px 16px 24px 18px;
+  --radius-modal: 22px 28px 24px 30px / 28px 22px 30px 24px;
+  --radius-pill: 999px;
+
+  /* —— 硬墨色偏移投影（无模糊）—— */
+  --shadow-card: 2px 2px 0 rgba(26,26,26,0.82);
+  --shadow-card-hover: 4px 4px 0 rgba(26,26,26,0.9);
+  --shadow-bubble: 3px 3px 0 rgba(26,26,26,0.85);
+  --shadow-modal: 6px 6px 0 rgba(26,26,26,0.5);
+  --shadow-drawer: 5px 5px 0 rgba(26,26,26,0.5);
+
+  --color-code-bg: #1A1A1A;
+  --color-code-text: #FAFAF8;
+  --color-overlay: rgba(26,26,26,0.45);
+  --color-overlay-soft: rgba(26,26,26,0.25);
+  --color-success-soft: #E3EADD;
+  --color-warning-soft: #F4E6C5;
+  --color-danger-soft: #F0DAD1;
+
+  /* —— 手写字（拉丁 Caveat/Gaegu；中文回落圆体 sans）—— */
+  --font-display: 'Caveat', 'Gaegu', "PingFang SC", "Microsoft YaHei", "Noto Sans SC", cursive, sans-serif;
+  --font-body: 'Gaegu', 'Caveat', "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+
+  /* —— 纸纹点底（html 背景，全局）—— */
+  --grid-line: transparent;
+  --bg-grid: none;
+  --bg-glow: none;
+  --bg-halftone: radial-gradient(rgba(26,26,26,0.05) 0.6px, transparent 0.7px);
+  --bg-halftone-size: 5px 5px;
+}
+
+/* 反精致 = 无平滑过渡（硬切，手作感）*/
+html[data-theme="paper"] * { transition: none !important; }
+
+/* 手写标题（拉丁 Caveat；中文回落圆体）*/
+html[data-theme="paper"] h1,
+html[data-theme="paper"] h2,
+html[data-theme="paper"] .font-display {
+  font-family: 'Caveat', 'Gaegu', "PingFang SC", "Microsoft YaHei", cursive, sans-serif !important;
+  letter-spacing: 0 !important;
+  font-weight: 700 !important;
+}
+
+/* 把玻璃工具类全局拍平成纸面（去模糊 / 去折射高光）*/
+html[data-theme="paper"] .glass,
+html[data-theme="paper"] .glass-strong,
+html[data-theme="paper"] .liquid-glass,
+html[data-theme="paper"] .glass-btn,
+html[data-theme="paper"] .pill-nav {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: var(--color-surface) !important;
+  border: 2px solid var(--color-border) !important;
+  box-shadow: 2px 2px 0 rgba(26,26,26,0.82) !important;
+}
+html[data-theme="paper"] .glass-btn::after,
+html[data-theme="paper"] .liquid-glass::after { display: none !important; }
+html[data-theme="paper"] .glass-btn-primary,
+html[data-theme="paper"] .pill-nav-item.active {
+  background: var(--color-primary) !important;
+  color: #FAFAF8 !important;
+  border-color: var(--color-border) !important;
+}
+
+/* —— Tasks / Chat 容器：叠加更细的双层纸纹 grain —— */
+html[data-theme="paper"] .ap-tasks,
+html[data-theme="paper"] .ap-chat {
+  background-color: var(--color-bg) !important;
+  background-image:
+    radial-gradient(rgba(26,26,26,0.045) 0.6px, transparent 0.7px),
+    radial-gradient(rgba(196,167,125,0.10) 0.6px, transparent 0.7px) !important;
+  background-size: 4px 4px, 9px 9px !important;
+  background-position: 0 0, 2px 3px !important;
+}
+
+/* 任务标题手绘下划（牛皮纸马克笔）*/
+html[data-theme="paper"] .ap-tasks h1 { position: relative; display: inline-block; }
+html[data-theme="paper"] .ap-tasks h1::after {
+  content: "";
+  position: absolute; left: -3px; right: -7px; bottom: -2px; height: 7px;
+  background: var(--color-accent);
+  opacity: 0.55;
+  border-radius: 60% 40% 55% 45% / 100% 100% 45% 60%;
+  transform: rotate(-1.2deg);
+  z-index: -1;
+}
+
+/* —— Tasks：任务组卡片 = 纸卡 + 墨线手绘框 + 硬投影 + 轻微歪斜 —— */
+html[data-theme="paper"] .ap-card {
+  background: var(--color-surface) !important;
+  border: 2px solid var(--color-border) !important;
+  border-radius: 255px 14px 225px 16px / 16px 225px 14px 255px !important;
+  box-shadow: 3px 3px 0 rgba(26,26,26,0.85) !important;
+  overflow: visible !important;
+}
+html[data-theme="paper"] section:nth-of-type(odd) .ap-card { transform: rotate(-0.5deg); }
+html[data-theme="paper"] section:nth-of-type(even) .ap-card { transform: rotate(0.55deg); }
+html[data-theme="paper"] .ap-row { border-bottom-color: var(--color-border-soft) !important; }
+/* hover = 牛皮纸荧光笔扫过（左浓右淡的不均匀马克笔 wash）+ 左缘墨条 */
+html[data-theme="paper"] .ap-row:hover {
+  background: linear-gradient(95deg,
+    rgba(196,167,125,0.34) 0%,
+    rgba(196,167,125,0.20) 55%,
+    rgba(196,167,125,0.10) 100%) !important;
+  box-shadow: inset 3px 0 0 var(--color-border) !important;
+}
+
+/* —— Chat：消息气泡 = 墨线框 + 硬投影 + 手画不对称圆角 —— */
+html[data-theme="paper"] .ap-bubble {
+  border: 2px solid var(--color-border) !important;
+  box-shadow: 3px 3px 0 rgba(26,26,26,0.85) !important;
+}
+html[data-theme="paper"] .ap-bubble-ai {
+  background: var(--color-surface) !important;
+  border-radius: 20px 20px 20px 4px / 22px 22px 6px 22px !important;
+}
+html[data-theme="paper"] .ap-bubble-user {
+  background: var(--color-primary-soft) !important;
+  border-radius: 20px 20px 4px 20px / 22px 22px 22px 6px !important;
+}

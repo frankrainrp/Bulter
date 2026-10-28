@@ -17,6 +17,7 @@ import React, {
 } from "react";
 import { CheckCircle2, Info, AlertTriangle, XCircle, X } from "lucide-react";
 import { playSound } from "@/lib/sound";
+import { useT } from "@/lib/i18n";
 
 export type ToastKind = "success" | "info" | "warning" | "error";
 
@@ -153,6 +154,7 @@ function ToastStack({ items, onDismiss }: { items: ToastItem[]; onDismiss: (id: 
 }
 
 function ToastRow({ item, onDismiss }: { item: ToastItem; onDismiss: () => void }) {
+  const { t } = useT();
   const meta = KIND_META[item.kind ?? "info"];
   // error toast 进场后抖动一下（配 toast-error 音）
   const isError = item.kind === "error";
@@ -213,7 +215,7 @@ function ToastRow({ item, onDismiss }: { item: ToastItem; onDismiss: () => void 
       </div>
       <button
         onClick={onDismiss}
-        aria-label="关闭"
+        aria-label={t("common.close")}
         style={{
           width: 20,
           height: 20,

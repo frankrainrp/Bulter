@@ -5,6 +5,7 @@
 // ============================================================
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import AuthGate from "@/components/AuthGate";
 import TopBar from "@/components/layout/TopBar";
 import LeftRail from "@/components/layout/LeftRail";
 import MiniAppsDrawer from "@/components/MiniAppsDrawer";
@@ -38,10 +39,22 @@ import {
   cancelSubscription,
   getPlanDef,
   useSubscription,
+  addInvoice,
   type PlanId,
   type BillingCycle,
   type CardInfo,
 } from "@/lib/billing";
+import {
+  isPremiumModel,
+  creditCostOf,
+  canAfford,
+  spendCredits,
+  purchasePack,
+  getPack,
+  CREDITS_WALL_EVENT,
+} from "@/lib/credits";
+import type { CheckoutProduct } from "@/components/CheckoutModal";
+import { setLocalDataset } from "@/lib/panel-local";
 import type { ChatMessage, ChatSession, ProcessingPipeline, DdlItem, NavId, UploadedFile, DdlAttachment, Note, CustomPanel } from "@/lib/types";
 import { INITIAL_STEPS } from "@/lib/mock-pipeline";
 import { streamChat, type ApiMessage } from "@/lib/chat-client";
@@ -68,7 +81,6 @@ import {
   putCustomPanel,
   updateCustomPanel,
 } from "@/lib/custom-panels";
-import { loadServerState, saveServerState } from "@/lib/server-state";
 import { playSound } from "@/lib/sound";
 import RecurringTasksManager from "@/components/RecurringTasksManager";
 import {
@@ -82,6 +94,14 @@ import type { RecurringTask } from "@/lib/types";
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 
 export default function HomePage() {
+  return (
+    <AuthGate>
+      <ButlerApp />
+    </AuthGate>
+  );
+}
+
+function ButlerApp() {
   const toast = useToast();
   const { t } = useT();
   const [activeNav, setActiveNav] = useState<NavId>("chat");
@@ -165,7 +185,7 @@ export default function HomePage() {
   const activeSessionIdRef = useRef<string | null>(null);
   useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
 
-  // ---------- 持久化：服务器 SQLite 为主，浏览器 IndexedDB 为本机缓存 ----------
+  // ---------- 持久化：启动 load + 改动同步到 IndexedDB（Dexie） ----------
   const [hydrated, setHydrated] = useState(false);
 
   // 启动一次性 load
@@ -173,27 +193,14 @@ export default function HomePage() {
     let cancelled = false;
     (async () => {
       try {
-        let ddlRows: DdlItem[];
-        let sessRows: ChatSession[];
-        let msgRows: ChatMessage[];
-        let noteRows: Note[];
-        try {
-          const remote = await loadServerState();
-          ddlRows = remote.ddls as DdlItem[];
-          sessRows = remote.sessions as ChatSession[];
-          msgRows = remote.messages as ChatMessage[];
-          noteRows = remote.notes as Note[];
-        } catch (remoteError) {
-          console.warn("[sqlite] unavailable, falling back to browser cache:", remoteError);
-          const { getDb } = await import("@/lib/db");
-          const db = getDb();
-          [ddlRows, sessRows, msgRows, noteRows] = await Promise.all([
-            db.ddls.toArray(),
-            db.sessions.toArray(),
-            db.messages.toArray(),
-            db.notes.toArray(),
-          ]);
-        }
+        const { getDb } = await import("@/lib/db");
+        const db = getDb();
+        const [ddlRows, sessRows, msgRows, noteRows] = await Promise.all([
+          db.ddls.toArray(),
+          db.sessions.toArray(),
+          db.messages.toArray(),
+          db.notes.toArray(),
+        ]);
         if (cancelled) return;
         if (ddlRows.length > 0) setDdls(ddlRows);
         if (noteRows.length > 0) setNotes(noteRows);
@@ -205,7 +212,7 @@ export default function HomePage() {
           const now = Date.now();
           const fresh: ChatSession = {
             id: "sess-" + Math.random().toString(36).slice(2, 9) + now.toString(36),
-            title: "新对话",
+            title: "",
             createdAt: now,
             updatedAt: now,
           };
@@ -233,12 +240,11 @@ export default function HomePage() {
     return () => { cancelled = true; };
   }, []);
 
-  // 改动同步：SQLite + IndexedDB 缓存
+  // 改动同步：每次 ddls 变化，整体替换 IndexedDB 表
   useEffect(() => {
     if (!hydrated) return; // 防止首次渲染（空数组）覆盖已有数据
     (async () => {
       try {
-        await saveServerState("ddls", ddls);
         const { getDb } = await import("@/lib/db");
         const db = getDb();
         await db.transaction("rw", db.ddls, async () => {
@@ -256,7 +262,6 @@ export default function HomePage() {
     if (!hydrated) return;
     (async () => {
       try {
-        await saveServerState("sessions", sessions);
         const { getDb } = await import("@/lib/db");
         const db = getDb();
         await db.transaction("rw", db.sessions, async () => {
@@ -274,7 +279,6 @@ export default function HomePage() {
     if (!hydrated) return;
     (async () => {
       try {
-        await saveServerState("notes", notes);
         const { getDb } = await import("@/lib/db");
         const db = getDb();
         await db.transaction("rw", db.notes, async () => {
@@ -309,9 +313,9 @@ export default function HomePage() {
     const snapshot = notes.find((n) => n.id === id);
     if (!snapshot) return;
     setNotes((prev) => prev.filter((n) => n.id !== id));
-    toast.success(`已删除笔记「${snapshot.title || "(无标题)"}」`, {
+    toast.success(t("pg.delNote", { title: snapshot.title || t("td.note.untitled") }), {
       action: {
-        label: "撤销",
+        label: t("pg.undo"),
         onClick: () => setNotes((prev) => [snapshot, ...prev]),
       },
     });
@@ -332,7 +336,6 @@ export default function HomePage() {
         const { getDb } = await import("@/lib/db");
         const db = getDb();
         const persistable = messages.filter((m) => m.role !== "pipeline" && m.role !== "confirm");
-        await saveServerState("messages", persistable);
         await db.transaction("rw", db.messages, async () => {
           await db.messages.clear();
           if (persistable.length > 0) await db.messages.bulkPut(persistable);
@@ -357,7 +360,7 @@ export default function HomePage() {
       if (s.id !== sid) return s;
       const next: ChatSession = { ...s, updatedAt: Date.now() };
       // 默认标题 → 用首条消息前 24 字
-      if (titleHint && s.title === "新对话") {
+      if (titleHint && s.title === "") {
         const t = titleHint.trim().slice(0, 24);
         if (t) next.title = t;
       }
@@ -420,11 +423,11 @@ export default function HomePage() {
     try {
       // ---- Step 1: 解析 / OCR + 双重粗筛（关键词 → 语义） ----
       setStep(0, "running");
-      if (!uploaded.file) throw new Error("文件对象丢失");
+      if (!uploaded.file) throw new Error(t("pg.fileLost"));
 
       // 大文件 warning（10 MB+）
       if (uploaded.file.size > 10 * 1024 * 1024) {
-        setStep(0, "running", `${(uploaded.file.size / 1024 / 1024).toFixed(1)} MB 大文件，请稍候…`);
+        setStep(0, "running", t("pg.bigFile", { mb: (uploaded.file.size / 1024 / 1024).toFixed(1) }));
       }
 
       const { parseDocument, filterDdlRelevant } = await import("@/lib/document-parser");
@@ -432,7 +435,7 @@ export default function HomePage() {
       if (parsed.ok !== true) {
         // 无 OCR key 的友好提示
         const hint = parsed.needsConfig
-          ? "\n\n💡 提示：图片/扫描件需要配置 MISTRAL_API_KEY。请到 console.mistral.ai 申请后填到 apps/web/.env.local 重启。"
+          ? t("pg.ocrHint")
           : "";
         setStep(0, "failed", parsed.error + hint);
         finishPipeline("failed");
@@ -440,7 +443,7 @@ export default function HomePage() {
       }
 
       const sourceLabel = parsed.source === "unpdf"
-        ? "本地解析 (unpdf)"
+        ? t("pg.localParse")
         : parsed.source.startsWith("ocr-")
         ? `OCR (${parsed.source.replace("ocr-", "")})`
         : parsed.source;
@@ -450,9 +453,9 @@ export default function HomePage() {
 
       // 1b. 语义粗筛（MiniLM embedding，首次加载 ~22MB；失败降级到纯关键词）
       let finalMd = keywordFiltered;
-      let semDetail = "（仅关键词筛）";
+      let semDetail = t("pg.kwOnly");
       try {
-        setStep(0, "running", `${sourceLabel} · ${parsed.pages} 页 → ${parsed.text.length} 字 → 关键词 ${keywordFiltered.length} 字，正在语义粗筛…`);
+        setStep(0, "running", t("pg.parseProgress", { label: sourceLabel, pages: parsed.pages, chars: parsed.text.length, kw: keywordFiltered.length }));
         const { filterBySemantic } = await import("@/lib/semantic-filter");
         // 实测数据：相关段相似度 0.55+，弱相关 0.15-0.30，垃圾 <0.15
         // 阈值 0.35 + topK 20 既能砍掉模板段又保住所有真 DDL
@@ -466,7 +469,7 @@ export default function HomePage() {
         // 模型下载失败 / 浏览器不支持 → 降级
         console.warn("semantic filter unavailable, fallback to keyword only:", e);
       }
-      setStep(0, "success", `${sourceLabel} · ${parsed.pages} 页 → ${parsed.text.length} 字 → 关键词 ${keywordFiltered.length} 字 ${semDetail}`);
+      setStep(0, "success", t("pg.parseDone", { label: sourceLabel, pages: parsed.pages, chars: parsed.text.length, kw: keywordFiltered.length, sem: semDetail }));
 
       // ---- Step 2: V4 Flash 提取 DDL ----
       setStep(1, "running");
@@ -477,14 +480,14 @@ export default function HomePage() {
         body: JSON.stringify({ markdown: finalMd, filename: uploaded.name, currentDate: isoToday }),
       });
       const json = await res.json();
-      if (!json.ok) { setStep(1, "failed", json.error || "提取失败"); finishPipeline("failed"); return; }
+      if (!json.ok) { setStep(1, "failed", json.error || t("pg.extractFail")); finishPipeline("failed"); return; }
       const items: Array<Omit<DdlItem, "id" | "source" | "completed">> = json.items || [];
-      setStep(1, "success", `V4 Flash 提取 ${items.length} 条`);
+      setStep(1, "success", t("pg.extractN", { n: items.length }));
 
       // ---- Step 3: 写入日历（暂跳过，Phase 4 接 Google Cal）----
       setStep(2, "running");
       await new Promise((r) => setTimeout(r, 300));
-      setStep(2, "success", "（已跳过，Phase 4 接 Google Calendar）");
+      setStep(2, "success", t("pg.calSkip"));
 
       // ---- Step 4: 落入待核实队列（v2：不直接 setDdls，需用户核实）----
       setStep(3, "running");
@@ -502,12 +505,12 @@ export default function HomePage() {
       const batch = makeBatch(
         sid,
         "pdf-extract",
-        `我从「${uploaded.name}」中识别到 ${newDdls.length} 条待办，请核实后再写入：`,
+        t("pg.pdfBatchIntro", { name: uploaded.name, n: newDdls.length }),
       );
       batch.changes = newDdls.map<PendingChange>((d) => ({
         id: makeChangeId(),
         kind: "create",
-        summary: `${d.taskName} · ${d.dueDate || "待定"}${d.dueTime ? " " + d.dueTime : ""}${d.weight != null ? ` · ${d.weight}%` : ""}`,
+        summary: `${d.taskName} · ${d.dueDate || t("tasks.date.tbd")}${d.dueTime ? " " + d.dueTime : ""}${d.weight != null ? ` · ${d.weight}%` : ""}`,
         draft: d,
       }));
       setPendingBatches((prev) => ({ ...prev, [batch.id]: batch }));
@@ -728,6 +731,13 @@ export default function HomePage() {
       return;
     }
 
+    // P5′ 积分预检：高级模型按次扣积分（Flash/思考走免费窗口，不耗积分）
+    const premiumCost = isPremiumModel(selectedModel) ? creditCostOf("chatPremium", selectedModel) : 0;
+    if (premiumCost > 0 && !canAfford(premiumCost)) {
+      setCreditsWall(premiumCost);
+      return;
+    }
+
     const filesSnapshot = attachedFiles;
 
     // 1. 用户消息入栈
@@ -749,7 +759,8 @@ export default function HomePage() {
       return;
     }
 
-    // 3. 纯文本 → 真实 AI 对话
+    // 3. 纯文本 → 真实 AI 对话（高级模型先扣积分，预检已通过）
+    if (premiumCost > 0) spendCredits(premiumCost, "chatPremium");
     setIsLoading(true);
     currentBatchIdRef.current = null; // 新一轮 send：清掉旧 batchId，让首个 tool_call 时建新 batch
 
@@ -920,8 +931,8 @@ export default function HomePage() {
     } catch { /* ignore */ }
     // 清理:去标点 / 引号 / 换行,限制 20 字
     const cleaned = title.replace(/["""《》「」<>【】[\]:：。.!！?？\n\r\s]/g, "").trim().slice(0, 20);
-    if (cleaned && cleaned !== "新对话") {
-      setSessions((prev) => prev.map((s) => (s.id === sid && s.title === "新对话" ? { ...s, title: cleaned } : s)));
+    if (cleaned) {
+      setSessions((prev) => prev.map((s) => (s.id === sid && s.title === "" ? { ...s, title: cleaned } : s)));
     }
   }, []);
 
@@ -932,7 +943,7 @@ export default function HomePage() {
     if (!sid) return;
     if (titleRequestedRef.current.has(sid)) return;
     const session = sessions.find((s) => s.id === sid);
-    if (!session || session.title !== "新对话") return;
+    if (!session || session.title !== "") return;
     const sessMsgs = messages.filter((m) => m.sessionId === sid && (m.role === "user" || m.role === "assistant"));
     const lastUser = [...sessMsgs].reverse().find((m) => m.role === "user");
     const lastAssistant = [...sessMsgs].reverse().find((m) => m.role === "assistant" && !m.isError && m.content.length > 5);
@@ -1051,7 +1062,7 @@ export default function HomePage() {
     // 当前 session 已是空白默认对话 → 只切回 chat 面板，不开新 session
     const sid = activeSessionIdRef.current;
     const cur = sid ? sessions.find((s) => s.id === sid) : null;
-    const curEmpty = cur && cur.title === "新对话" &&
+    const curEmpty = cur && cur.title === "" &&
       !messages.some((m) => m.sessionId === sid);
     if (curEmpty) {
       setActiveNav("chat");
@@ -1061,7 +1072,7 @@ export default function HomePage() {
     const now = Date.now();
     const fresh: ChatSession = {
       id: "sess-" + Math.random().toString(36).slice(2, 9) + now.toString(36),
-      title: "新对话",
+      title: "",
       createdAt: now,
       updatedAt: now,
     };
@@ -1099,7 +1110,7 @@ export default function HomePage() {
           const now = Date.now();
           const fresh: ChatSession = {
             id: "sess-" + Math.random().toString(36).slice(2, 9) + now.toString(36),
-            title: "新对话",
+            title: "",
             createdAt: now,
             updatedAt: now,
           };
@@ -1112,7 +1123,7 @@ export default function HomePage() {
 
     toast.success(`已删除会话「${sessionSnapshot.title}」`, {
       action: {
-        label: "撤销",
+        label: t("pg.undo"),
         onClick: () => {
           setSessions((prev) => [sessionSnapshot, ...prev.filter((s) => s.id !== sessionSnapshot.id)]);
           setMessages((prev) => [...prev, ...messagesSnapshot]);
@@ -1182,23 +1193,48 @@ export default function HomePage() {
   const subscription = useSubscription();
   const [billingOpen, setBillingOpen] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
-  const [checkout, setCheckout] = useState<{ plan: PlanId; cycle: BillingCycle } | null>(null);
+  const [checkout, setCheckout] = useState<CheckoutProduct | null>(null);
   // [087] 免费额度耗尽 softwall
   const [quotaWallOpen, setQuotaWallOpen] = useState(false);
+  // P5′ 积分不足 softwall（值 = 本次所需积分；功能点直接 set 或广播 CREDITS_WALL_EVENT）
+  const [creditsWall, setCreditsWall] = useState<number | null>(null);
+  useEffect(() => {
+    const onWall = (e: Event) => setCreditsWall((e as CustomEvent<{ need: number }>).detail?.need ?? 0);
+    window.addEventListener(CREDITS_WALL_EVENT, onWall);
+    return () => window.removeEventListener(CREDITS_WALL_EVENT, onWall);
+  }, []);
   // 升级 CTA：先开定价页比价
   const openPricing = useCallback(() => { setBillingOpen(false); setPricingOpen(true); }, []);
   // 定价页选档 → 开结账
   const handleCheckout = useCallback((plan: PlanId, cycle: BillingCycle) => {
     setPricingOpen(false);
-    setCheckout({ plan, cycle });
+    setCheckout({ kind: "plan", plan, cycle });
   }, []);
-  // 结账成功 → 落订阅 + 账单 + toast（直接读 checkout，勿在 setState updater 里做副作用）
+  // P5′ 积分加油包 → 开结账（pack 模式）
+  const handleBuyPack = useCallback((packId: string) => {
+    setPricingOpen(false);
+    setCheckout({ kind: "pack", packId });
+  }, []);
+  // 结账成功 → 落订阅/积分 + 账单 + toast（直接读 checkout，勿在 setState updater 里做副作用）
   const handleCheckoutConfirmed = useCallback((card: CardInfo) => {
     if (!checkout) return;
+    if (checkout.kind === "pack") {
+      const grant = purchasePack(checkout.packId);
+      const pack = getPack(checkout.packId);
+      if (grant && pack) {
+        addInvoice({
+          id: grant.id, date: grant.grantedAt, planId: subscription.plan, cycle: "monthly",
+          amount: pack.price, status: "paid", kind: "pack", credits: pack.credits,
+        });
+        playSound("achievement");
+        toast.success(`✨ ${t("checkout.packSuccessDesc", { credits: pack.credits })}`);
+      }
+      return;
+    }
     subscribeTo(checkout.plan, checkout.cycle, card);
     playSound("achievement");
     toast.success(`🎉 ${t("checkout.successDesc", { plan: t(getPlanDef(checkout.plan).nameKey) })}`);
-  }, [checkout, toast, t]);
+  }, [checkout, subscription.plan, toast, t]);
   // 定价页「继续免费」/ 账单「取消订阅」→ 降级
   const handleDowngradeFree = useCallback(() => {
     cancelSubscription();
@@ -1243,7 +1279,7 @@ export default function HomePage() {
   // Phase E 创建新面板：建一条 + 立即激活
   const handleCreateCustomPanel = useCallback(async () => {
     try {
-      const p = await createCustomPanel("新面板");
+      const p = await createCustomPanel(t("pg.newPanel"));
       setActiveCustomPanelId(p.id);
       playSound("panel-create"); // [056]
     } catch (e) {
@@ -1296,9 +1332,9 @@ export default function HomePage() {
   // G5.2 学习习惯识别:基于 messages 时间戳 + ddls.dueTime 派生「最佳时段」
   const bestHourLabel = useMemo(() => {
     if (!hydrated) return null;
-    const buckets: Record<string, number> = { 早晨: 0, 上午: 0, 中午: 0, 下午: 0, 傍晚: 0, 晚上: 0, 深夜: 0 };
+    const buckets: Record<string, number> = { earlyMorning: 0, morning: 0, noon: 0, afternoon: 0, evening: 0, night: 0, dawn: 0 };
     const classify = (h: number) =>
-      h < 6 ? "深夜" : h < 9 ? "早晨" : h < 12 ? "上午" : h < 14 ? "中午" : h < 17 ? "下午" : h < 19 ? "傍晚" : h < 23 ? "晚上" : "深夜";
+      h < 6 ? "dawn" : h < 9 ? "earlyMorning" : h < 12 ? "morning" : h < 14 ? "noon" : h < 17 ? "afternoon" : h < 19 ? "evening" : h < 23 ? "night" : "dawn";
     for (const m of messages) {
       if (m.role !== "user") continue;
       const ts = m.timestamp instanceof Date ? m.timestamp : new Date(m.timestamp as unknown as string);
@@ -1309,8 +1345,8 @@ export default function HomePage() {
     if (total < 5) return null; // 样本不足
     const top = Object.entries(buckets).sort((a, b) => b[1] - a[1])[0];
     if (!top || top[1] < 2) return null;
-    return top[0];
-  }, [hydrated, messages]);
+    return t(`pg.bucket.${top[0]}`);
+  }, [hydrated, messages, t]);
   // G2.1 hydrate 后 touchStreak;若是新一天 toast 一下
   useEffect(() => {
     if (!hydrated) return;
@@ -1319,9 +1355,9 @@ export default function HomePage() {
       const { newDay, broken, state } = touchStreak();
       setStreakDays(state.currentDays);
       if (newDay && state.currentDays > 1 && !broken) {
-        toast.success(`🔥 连续打开 Butler ${state.currentDays} 天!继续保持`, { duration: 5000 });
+        toast.success(t("pg.streakToast", { n: state.currentDays }), { duration: 5000 });
       } else if (newDay && broken) {
-        toast.info(`👋 欢迎回来,重新开始 streak`);
+        toast.info(t("pg.welcomeBack"));
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1374,6 +1410,42 @@ export default function HomePage() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, ddls, notes, streakDays]);
+
+  // A1.2 本地数据源注册：把真实 ddls/notes/sessions/streak 扁平成「面板友好行」
+  // 灌入 panel-local 注册表，供 kind:"local" 数据源消费（"我本月 DDL 完成率"等面板）
+  useEffect(() => {
+    setLocalDataset("ddls", ddls.map((d) => ({
+      title: d.taskName,
+      completed: d.completed || d.status === "done",
+      status: d.status ?? (d.completed ? "done" : "todo"),
+      priority: d.priority ?? "",
+      dueDate: d.dueDate,
+      weight: d.weight ?? 0,
+      isGroupWork: d.isGroupWork,
+      tags: (d.tags ?? []).join(","),
+    })));
+  }, [ddls]);
+  useEffect(() => {
+    setLocalDataset("notes", notes.map((n) => ({
+      title: n.title,
+      wordCount: n.content.length,
+      pinned: Boolean(n.pinned),
+      tags: (n.tags ?? []).join(","),
+      updatedAt: n.updatedAt,
+      createdAt: n.createdAt,
+    })));
+  }, [notes]);
+  useEffect(() => {
+    setLocalDataset("sessions", sessions.map((s) => ({
+      title: s.title,
+      messageCount: messages.filter((m) => m.sessionId === s.id).length,
+      updatedAt: s.updatedAt,
+    })));
+  }, [sessions, messages]);
+  useEffect(() => {
+    setLocalDataset("streak", [{ current: streakDays, longest: streakDays }]);
+  }, [streakDays]);
+
   // B3 全局搜索跳转后高亮目标（每次设置 2s 后自动清空,触发 CSS 闪烁动画）
   const [highlightTaskId, setHighlightTaskId] = useState<string | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1489,7 +1561,7 @@ export default function HomePage() {
     toast.success(`已加入 ${demoDdls.length} 个示例任务 + ${demoNotes.length} 篇笔记`, {
       duration: 8000,
       action: {
-        label: "撤销",
+        label: t("pg.undo"),
         onClick: () => {
           setDdls(prevDdls);
           setNotes(prevNotes);
@@ -1576,7 +1648,7 @@ export default function HomePage() {
     setEditing(null);
     toast.success(`已删除任务「${target.taskName}」`, {
       action: {
-        label: "撤销",
+        label: t("pg.undo"),
         onClick: () => setDdls((prev) => [...prev, target]),
       },
     });
@@ -1931,6 +2003,7 @@ export default function HomePage() {
           open={billingOpen}
           onClose={() => setBillingOpen(false)}
           onViewPlans={openPricing}
+          onBuyPack={openPricing}
           onCancelled={() => toast.info(t("billing.cancelled"))}
         />
         <PricingModal
@@ -1938,24 +2011,26 @@ export default function HomePage() {
           onClose={() => setPricingOpen(false)}
           subscription={subscription}
           onCheckout={handleCheckout}
+          onBuyPack={handleBuyPack}
           onDowngradeFree={handleDowngradeFree}
         />
         <CheckoutModal
           open={checkout !== null}
-          plan={checkout?.plan ?? "pro"}
-          cycle={checkout?.cycle ?? "annual"}
+          product={checkout}
           onClose={() => setCheckout(null)}
           onConfirmed={handleCheckoutConfirmed}
         />
-        {/* [087] 免费额度耗尽 softwall（切回 Flash / 充值 / 开会员 三出口）*/}
+        {/* softwall：[087] 免费窗口耗尽（切 Flash / 加油包 / 会员）+ P5′ 积分不足（加油包 / 会员）*/}
         <QuotaWallModal
-          open={quotaWallOpen}
+          open={quotaWallOpen || creditsWall !== null}
+          mode={creditsWall !== null ? "credits" : "window"}
+          creditsNeed={creditsWall ?? 0}
           resetAt={getNextResetAt()}
           canFallbackFlash={selectedModel !== "deepseek-v4-flash"}
-          onSwitchFlash={() => { handleSelectModel("deepseek-v4-flash"); setQuotaWallOpen(false); }}
-          onTopUp={() => { setQuotaWallOpen(false); openPricing(); }}
-          onUpgrade={() => { setQuotaWallOpen(false); openPricing(); }}
-          onClose={() => setQuotaWallOpen(false)}
+          onSwitchFlash={() => { handleSelectModel("deepseek-v4-flash"); setQuotaWallOpen(false); setCreditsWall(null); }}
+          onTopUp={() => { setQuotaWallOpen(false); setCreditsWall(null); openPricing(); }}
+          onUpgrade={() => { setQuotaWallOpen(false); setCreditsWall(null); openPricing(); }}
+          onClose={() => { setQuotaWallOpen(false); setCreditsWall(null); }}
         />
 
         {/* [079] 周期任务管理 */}

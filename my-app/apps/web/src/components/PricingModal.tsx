@@ -22,6 +22,7 @@ import {
   pricePerMonth,
   chargeTotal,
 } from "@/lib/billing";
+import { PACKS } from "@/lib/credits";
 
 interface Props {
   open: boolean;
@@ -29,11 +30,13 @@ interface Props {
   subscription: Subscription;
   /** 升级 / 切换到付费档 → 打开结账 */
   onCheckout: (plan: PlanId, cycle: BillingCycle) => void;
+  /** 买积分加油包 → 打开结账（pack 模式） */
+  onBuyPack: (packId: string) => void;
   /** 降级到 free（取消订阅） */
   onDowngradeFree: () => void;
 }
 
-export default function PricingModal({ open, onClose, subscription, onCheckout, onDowngradeFree }: Props) {
+export default function PricingModal({ open, onClose, subscription, onCheckout, onBuyPack, onDowngradeFree }: Props) {
   const isMobile = useIsMobile();
   const { t } = useT();
   const [cycle, setCycle] = useState<BillingCycle>("annual");
@@ -146,6 +149,38 @@ export default function PricingModal({ open, onClose, subscription, onCheckout, 
               onDowngradeFree={onDowngradeFree}
               t={t}
             />
+          ))}
+        </div>
+
+        {/* 积分加油包条（一次性购买，超额/轻度用户承接） */}
+        <div
+          style={{
+            display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8,
+            padding: isMobile ? "0 14px 14px" : "0 28px 16px", flexShrink: 0,
+          }}
+        >
+          <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{t("pricing.packsTitle")}</span>
+          {PACKS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => onBuyPack(p.id)}
+              style={{
+                padding: "6px 13px", borderRadius: 999,
+                border: "1px solid var(--color-border)", background: "var(--color-surface)",
+                color: "var(--color-text)", fontSize: 12, fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit", transition: "border-color 0.15s, color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "var(--color-primary)";
+                e.currentTarget.style.color = "var(--color-primary)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--color-border)";
+                e.currentTarget.style.color = "var(--color-text)";
+              }}
+            >
+              {t("pricing.packBtn", { credits: p.credits, price: `${CURRENCY}${p.price}` })}
+            </button>
           ))}
         </div>
 

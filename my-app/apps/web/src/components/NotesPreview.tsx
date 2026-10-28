@@ -9,6 +9,7 @@ import React, { useEffect } from "react";
 import { X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   title: string;          // 任务名
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function NotesPreview({ title, notes, onClose }: Props) {
+  const { t } = useT();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
@@ -59,7 +61,7 @@ export default function NotesPreview({ title, notes, onClose }: Props) {
               fontSize: 10, fontWeight: 600, color: "var(--color-text-muted)",
               letterSpacing: 0.5, textTransform: "uppercase", margin: 0,
             }}>
-              备注
+              {t("notes.notesLabel")}
             </p>
             <h2 style={{
               fontSize: 14, fontWeight: 600, color: "var(--color-text)",
@@ -70,7 +72,7 @@ export default function NotesPreview({ title, notes, onClose }: Props) {
             </h2>
           </div>
           <button
-            onClick={onClose} aria-label="关闭"
+            onClick={onClose} aria-label={t("common.close")}
             style={{
               width: 28, height: 28, borderRadius: 6, border: "none",
               background: "transparent", cursor: "pointer", color: "var(--color-text-muted)",
@@ -96,7 +98,7 @@ export default function NotesPreview({ title, notes, onClose }: Props) {
           {notes.trim() ? (
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{notes}</ReactMarkdown>
           ) : (
-            <p style={{ color: "var(--color-text-faint)", margin: 0 }}>（备注为空）</p>
+            <p style={{ color: "var(--color-text-faint)", margin: 0 }}>{t("notes.notesEmpty")}</p>
           )}
         </div>
       </div>

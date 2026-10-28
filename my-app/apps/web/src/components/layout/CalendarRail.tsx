@@ -9,6 +9,7 @@ import React, { useMemo, useState } from "react";
 import { Plus, CalendarDays, Layers, ChevronLeft, ChevronRight } from "lucide-react";
 import type { DdlItem } from "@/lib/types";
 import { RailPrimaryBtn, RailGroupTitle, RailItem } from "./LeftRail";
+import { useT } from "@/lib/i18n";
 
 interface CalendarRailProps {
   onCreateEvent: () => void;
@@ -18,7 +19,7 @@ interface CalendarRailProps {
   onJumpToDay?: (iso: string) => void;
 }
 
-const WEEK_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
+const WEEK_KEYS = ["cal.week.mon", "cal.week.tue", "cal.week.wed", "cal.week.thu", "cal.week.fri", "cal.week.sat", "cal.week.sun"];
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -41,6 +42,7 @@ function buildMiniMonth(cursor: Date): { cells: { iso: string; day: number; isCu
 }
 
 export default function CalendarRail({ onCreateEvent, ddls = [], onJumpToDay }: CalendarRailProps) {
+  const { t } = useT();
   const [cursor, setCursor] = useState(() => {
     const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d;
   });
@@ -75,7 +77,7 @@ export default function CalendarRail({ onCreateEvent, ddls = [], onJumpToDay }: 
         >
           <button
             onClick={prev}
-            aria-label="上月"
+            aria-label={t("rail.cal.prevMonth")}
             style={miniNavBtn()}
           >
             <ChevronLeft size={11} />
@@ -83,7 +85,7 @@ export default function CalendarRail({ onCreateEvent, ddls = [], onJumpToDay }: 
           <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text)" }}>{label}</span>
           <button
             onClick={next}
-            aria-label="下月"
+            aria-label={t("rail.cal.nextMonth")}
             style={miniNavBtn()}
           >
             <ChevronRight size={11} />
@@ -99,7 +101,7 @@ export default function CalendarRail({ onCreateEvent, ddls = [], onJumpToDay }: 
             marginBottom: 2,
           }}
         >
-          {WEEK_LABELS.map((w) => (
+          {WEEK_KEYS.map((w) => (
             <div
               key={w}
               style={{
@@ -110,7 +112,7 @@ export default function CalendarRail({ onCreateEvent, ddls = [], onJumpToDay }: 
                 padding: "2px 0",
               }}
             >
-              {w}
+              {t(w)}
             </div>
           ))}
         </div>
@@ -124,7 +126,7 @@ export default function CalendarRail({ onCreateEvent, ddls = [], onJumpToDay }: 
               <button
                 key={c.iso}
                 onClick={() => onJumpToDay?.(c.iso)}
-                title={c.iso + (hasEvent ? "（有事件）" : "")}
+                title={c.iso + (hasEvent ? t("rail.cal.hasEvent") : "")}
                 style={{
                   position: "relative",
                   fontSize: 10,

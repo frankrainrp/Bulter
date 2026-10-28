@@ -10,6 +10,7 @@
 import React, { useMemo } from "react";
 import { Share2 } from "lucide-react";
 import type { DdlItem } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   ddls?: DdlItem[];
@@ -20,6 +21,7 @@ function effStatus(d: DdlItem): "todo" | "in_progress" | "done" {
 }
 
 export default function ShareCard({ ddls = [] }: Props) {
+  const { t, lang } = useT();
   const stats = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const weekStart = new Date(today);
@@ -29,8 +31,8 @@ export default function ShareCard({ ddls = [] }: Props) {
     const weekDone = ddls.filter((d) => {
       if (effStatus(d) !== "done") return false;
       if (!d.dueDate) return false;
-      const t = new Date(d.dueDate).getTime();
-      return t >= weekStart.getTime() && t <= today.getTime() + 86400000;
+      const ts = new Date(d.dueDate).getTime();
+      return ts >= weekStart.getTime() && ts <= today.getTime() + 86400000;
     }).length;
 
     // 7 天柱图数据
@@ -38,15 +40,15 @@ export default function ShareCard({ ddls = [] }: Props) {
     for (let i = 0; i < 7; i++) {
       const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
       const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const label = ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
+      const label = t(`dow.${d.getDay()}`);
       const count = ddls.filter((it) => effStatus(it) === "done" && it.dueDate === iso).length;
       days.push({ iso, count, label });
     }
     const maxDay = Math.max(1, ...days.map((d) => d.count));
     return { totalDone, totalTodo, weekDone, days, maxDay };
-  }, [ddls]);
+  }, [ddls, t]);
 
-  const todayLabel = new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
+  const todayLabel = new Date().toLocaleDateString(lang === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "long", day: "numeric" });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -58,7 +60,7 @@ export default function ShareCard({ ddls = [] }: Props) {
         }}
       >
         <Share2 size={11} style={{ display: "inline", marginRight: 4, verticalAlign: "-2px" }} />
-        长按图片 / 右键保存,分享到朋友圈 · 小红书 · 微博
+        {t("share.saveHint")}
       </div>
 
       {/* 540×800 海报,缩放 0.55 适配 320px 抽屉 */}
@@ -93,7 +95,7 @@ export default function ShareCard({ ddls = [] }: Props) {
 
             {/* 顶部品牌 */}
             <text x="50" y="68" fontFamily="Inter, system-ui" fontSize="14" fill="#94a3b8" letterSpacing="3">
-              BUTLER · 学习管家
+              {t("share.brand")}
             </text>
             <text x="50" y="100" fontFamily="Inter, system-ui" fontSize="13" fill="#64748b">
               {todayLabel}
@@ -101,19 +103,19 @@ export default function ShareCard({ ddls = [] }: Props) {
 
             {/* Hero 数字 */}
             <text x="50" y="200" fontFamily="Inter, system-ui" fontSize="20" fill="#cbd5e1">
-              本周完成
+              {t("share.weekDone")}
             </text>
             <text x="50" y="290" fontFamily="Inter, system-ui" fontSize="100" fontWeight="700" fill="#FFFFFF">
               {stats.weekDone}
             </text>
             <text x={50 + (stats.weekDone < 10 ? 70 : stats.weekDone < 100 ? 130 : 190)} y="290" fontFamily="Inter, system-ui" fontSize="24" fill="#94a3b8">
-              件任务
+              {t("share.tasksUnit")}
             </text>
 
             {/* 累计 chip */}
             <rect x="50" y="320" width="200" height="42" rx="21" fill="url(#card)" stroke="rgba(255,255,255,0.15)" />
             <text x="68" y="347" fontFamily="Inter, system-ui" fontSize="14" fill="#cbd5e1">
-              累计完成
+              {t("share.totalDone")}
             </text>
             <text x="156" y="348" fontFamily="Inter, system-ui" fontSize="18" fontWeight="700" fill="#FFFFFF">
               {stats.totalDone}
@@ -121,7 +123,7 @@ export default function ShareCard({ ddls = [] }: Props) {
 
             <rect x="260" y="320" width="200" height="42" rx="21" fill="url(#card)" stroke="rgba(255,255,255,0.15)" />
             <text x="278" y="347" fontFamily="Inter, system-ui" fontSize="14" fill="#cbd5e1">
-              进行中
+              {t("share.inProgress")}
             </text>
             <text x="343" y="348" fontFamily="Inter, system-ui" fontSize="18" fontWeight="700" fill="#FFFFFF">
               {stats.totalTodo}
@@ -129,7 +131,7 @@ export default function ShareCard({ ddls = [] }: Props) {
 
             {/* 7 天柱图 */}
             <text x="50" y="430" fontFamily="Inter, system-ui" fontSize="13" fill="#94a3b8" letterSpacing="1">
-              7 天完成趋势
+              {t("share.trend7")}
             </text>
             {stats.days.map((d, idx) => {
               const x = 50 + idx * 64;
@@ -159,10 +161,10 @@ export default function ShareCard({ ddls = [] }: Props) {
             {/* Footer */}
             <line x1="50" y1="680" x2="490" y2="680" stroke="rgba(255,255,255,0.10)" />
             <text x="50" y="720" fontFamily="Inter, system-ui" fontSize="14" fontWeight="500" fill="#cbd5e1">
-              「让管家帮你管学习」
+              {t("share.slogan")}
             </text>
             <text x="50" y="752" fontFamily="Inter, system-ui" fontSize="11" fill="#64748b">
-              butler.app · 智能多模态学习管家
+              {t("share.footer")}
             </text>
 
             {/* Logo 小图标占位(墨绿圆) */}

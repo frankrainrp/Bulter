@@ -14,6 +14,7 @@
 import React, { useMemo } from "react";
 import { TrendingUp, CheckCircle2, Clock } from "lucide-react";
 import type { DdlItem } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   ddls: DdlItem[];
@@ -24,6 +25,7 @@ function effStatus(d: DdlItem): "todo" | "in_progress" | "done" {
 }
 
 export default function StatsApp({ ddls }: Props) {
+  const { t } = useT();
   const stats = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const weekStart = new Date(today);
@@ -35,7 +37,7 @@ export default function StatsApp({ ddls }: Props) {
       const d = new Date(weekStart);
       d.setDate(weekStart.getDate() + i);
       const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const label = ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
+      const label = t(`dow.${d.getDay()}`);
       const count = ddls.filter((it) => effStatus(it) === "done" && it.dueDate === iso).length;
       days.push({ label, iso, count });
     }
@@ -59,14 +61,14 @@ export default function StatsApp({ ddls }: Props) {
       .slice(0, 3);
 
     return { days, max, totalDone, totalTodo, topTags };
-  }, [ddls]);
+  }, [ddls, t]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       {/* 顶部:大数字双 chip */}
       <div style={{ display: "flex", gap: 10 }}>
-        <BigChip icon={<CheckCircle2 size={14} />} label="累计完成" value={stats.totalDone} color="var(--color-success)" />
-        <BigChip icon={<Clock size={14} />} label="未完成" value={stats.totalTodo} color="var(--color-warning)" />
+        <BigChip icon={<CheckCircle2 size={14} />} label={t("stats.totalDone")} value={stats.totalDone} color="var(--color-success)" />
+        <BigChip icon={<Clock size={14} />} label={t("stats.todo")} value={stats.totalTodo} color="var(--color-warning)" />
       </div>
 
       {/* 7 天趋势 */}
@@ -84,7 +86,7 @@ export default function StatsApp({ ddls }: Props) {
             textTransform: "uppercase",
           }}
         >
-          <TrendingUp size={11} /> 7 天完成趋势
+          <TrendingUp size={11} /> {t("stats.trend7")}
         </div>
         <div
           style={{
@@ -135,7 +137,7 @@ export default function StatsApp({ ddls }: Props) {
               textTransform: "uppercase",
             }}
           >
-            Top 标签
+            {t("stats.topTags")}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {stats.topTags.map((t) => (
@@ -190,7 +192,7 @@ export default function StatsApp({ ddls }: Props) {
             textAlign: "center",
           }}
         >
-          还没给任务打标签 — 给任务加 #tag 后这里会展示分布
+          {t("stats.noTags")}
         </div>
       )}
     </div>

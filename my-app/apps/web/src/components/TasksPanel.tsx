@@ -15,6 +15,7 @@ import type { DdlItem, DdlAttachment, TaskPriority, TaskStatus } from "@/lib/typ
 import type { TaskViewId } from "./layout/TasksRail";
 import { EmptyTasks, EmptyFilter } from "./EmptyIllustrations";
 import { useIsMobile } from "@/lib/use-is-mobile";
+import { useT, type TFunc } from "@/lib/i18n";
 
 interface Props {
   ddls: DdlItem[];
@@ -71,39 +72,39 @@ function effectiveStatus(d: DdlItem): TaskStatus {
 }
 
 // Epic 4.2 紧急度色彩(deadline 距今天数派生,优先于 priority)
-function computeUrgency(d: DdlItem): { color: string; title: string } | null {
+function computeUrgency(d: DdlItem, t: TFunc): { color: string; title: string } | null {
   if (d.completed || (d.status ?? "todo") === "done") return null;
   if (d.dueDate) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const due = new Date(d.dueDate);
     const days = (due.getTime() - today.getTime()) / 86400000;
-    if (days < 0) return { color: "var(--color-danger)", title: `已逾期 ${Math.abs(Math.floor(days))} 天` };
-    if (days < 1) return { color: "var(--color-danger)", title: "今日截止" };
-    if (days < 3) return { color: "#ea580c",            title: `${Math.ceil(days)} 天内截止` };
-    if (days < 7) return { color: "var(--color-warning)", title: `${Math.ceil(days)} 天内截止` };
-    return { color: "var(--color-success)", title: `${Math.ceil(days)} 天后截止` };
+    if (days < 0) return { color: "var(--color-danger)", title: t("tasks.urgency.overdue", { days: Math.abs(Math.floor(days)) }) };
+    if (days < 1) return { color: "var(--color-danger)", title: t("tasks.urgency.today") };
+    if (days < 3) return { color: "#ea580c",            title: t("tasks.urgency.within", { days: Math.ceil(days) }) };
+    if (days < 7) return { color: "var(--color-warning)", title: t("tasks.urgency.within", { days: Math.ceil(days) }) };
+    return { color: "var(--color-success)", title: t("tasks.urgency.after", { days: Math.ceil(days) }) };
   }
   // 无 deadline 退回 priority
   if (d.priority) {
-    return { color: PRIORITY_META[d.priority].color, title: `优先级 ${PRIORITY_META[d.priority].label}` };
+    return { color: PRIORITY_META[d.priority].color, title: t("tasks.urgency.priority", { label: t(PRIORITY_META[d.priority].labelKey) }) };
   }
   return null;
 }
 
-const PRIORITY_META: Record<TaskPriority, { label: string; color: string }> = {
-  high: { label: "高", color: "var(--color-danger)" },
-  med: { label: "中", color: "var(--color-warning)" },
-  low: { label: "低", color: "var(--color-info)" },
+const PRIORITY_META: Record<TaskPriority, { labelKey: string; color: string }> = {
+  high: { labelKey: "tasks.priority.high", color: "var(--color-danger)" },
+  med: { labelKey: "tasks.priority.med", color: "var(--color-warning)" },
+  low: { labelKey: "tasks.priority.low", color: "var(--color-info)" },
 };
 
 type GroupKey = "tbd" | "today" | "thisWeek" | "later" | "done";
 
-const GROUP_META: Record<GroupKey, { label: string; color: string }> = {
-  tbd:      { label: "待定",   color: "var(--color-warning)" },
-  today:    { label: "今天",   color: "var(--color-danger)" },
-  thisWeek: { label: "本周",   color: "var(--color-warning)" },
-  later:    { label: "之后",   color: "var(--color-primary)" },
-  done:     { label: "已完成", color: "var(--color-success)" },
+const GROUP_META: Record<GroupKey, { labelKey: string; color: string }> = {
+  tbd:      { labelKey: "tasks.group.tbd",      color: "var(--color-warning)" },
+  today:    { labelKey: "tasks.group.today",    color: "var(--color-danger)" },
+  thisWeek: { labelKey: "tasks.group.thisWeek", color: "var(--color-warning)" },
+  later:    { labelKey: "tasks.group.later",    color: "var(--color-primary)" },
+  done:     { labelKey: "tasks.group.done",     color: "var(--color-success)" },
 };
 
 function classifyGroup(ddl: DdlItem): GroupKey {
@@ -124,6 +125,7 @@ export default function TasksPanel({
   highlightTaskId,
 }: Props) {
   const isMobile = useIsMobile();
+  const { t } = useT();
   const filteredDdls = useMemo(() => filterByView(ddls, view), [ddls, view]);
 
   // B3 高亮目标 row 时 scrollIntoView（CSS 闪烁由 className 控制）
@@ -166,6 +168,7 @@ export default function TasksPanel({
 
   return (
     <div
+      className="ap-tasks"
       style={{
         height: "100%",
         overflow: "auto",
@@ -205,21 +208,21 @@ export default function TasksPanel({
               }}
             >
               {filteredDdls.length > 0
-                ? `当前视图 ${filteredDdls.length} 项 · 全部 ${ddls.length}（${totalActive} 待办 / ${totalDone} 已完成）`
-                : "当前视图无任务 — 切换左侧 View 或上传课件 / 对 Butler 说话创建"}
+                ? t("tasks.subtitle", { n: filteredDdls.length, total: ddls.length, active: totalActive, done: totalDone })
+                : t("tasks.subtitleEmpty")}
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
             {onOpenRecurring && (
-              <ToolbarBtn onClick={onOpenRecurring} icon={<Repeat size={13} />} label="周期任务" tooltip="管理重复任务（如每周健身 4 次），每到新周期自动生成" compact={isMobile} />
+              <ToolbarBtn onClick={onOpenRecurring} icon={<Repeat size={13} />} label={t("tasks.tb.recurring")} tooltip={t("tasks.tb.recurringTip")} compact={isMobile} />
             )}
-            <ToolbarBtn onClick={onExportIcs} icon={<CalendarPlus size={13} />} label="订阅日历" tooltip="下载 .ics → 导入手机/电脑系统日历自动提醒" compact={isMobile} />
-            <ToolbarBtn onClick={onExportJson} icon={<Download size={13} />} label="导出" tooltip="导出全部任务为 JSON 文件备份" compact={isMobile} />
-            <ToolbarBtn onClick={onImportJson} icon={<Upload size={13} />} label="导入 JSON" tooltip="从 JSON 文件合并任务（按 ID 去重）" compact={isMobile} />
+            <ToolbarBtn onClick={onExportIcs} icon={<CalendarPlus size={13} />} label={t("tasks.tb.ics")} tooltip={t("tasks.tb.icsTip")} compact={isMobile} />
+            <ToolbarBtn onClick={onExportJson} icon={<Download size={13} />} label={t("tasks.tb.export")} tooltip={t("tasks.tb.exportTip")} compact={isMobile} />
+            <ToolbarBtn onClick={onImportJson} icon={<Upload size={13} />} label={t("tasks.tb.importJson")} tooltip={t("tasks.tb.importJsonTip")} compact={isMobile} />
             {onImportIcs && (
-              <ToolbarBtn onClick={onImportIcs} icon={<CalendarPlus size={13} />} label="导入 ICS" tooltip="从 .ics 课表文件批量导入事件" compact={isMobile} />
+              <ToolbarBtn onClick={onImportIcs} icon={<CalendarPlus size={13} />} label={t("tasks.tb.importIcs")} tooltip={t("tasks.tb.importIcsTip")} compact={isMobile} />
             )}
-            <PrimaryBtn onClick={onRequestCreate} icon={<Plus size={14} />} label={isMobile ? "新建" : "New Task"} />
+            <PrimaryBtn onClick={onRequestCreate} icon={<Plus size={14} />} label={isMobile ? t("common.new") : t("tasks.newTask")} />
           </div>
         </header>
 
@@ -233,12 +236,12 @@ export default function TasksPanel({
               marginBottom: 16,
             }}
           >
-            {tagStats.map((t) => {
-              const ratio = t.total > 0 ? Math.round((t.done / t.total) * 100) : 0;
+            {tagStats.map((ts) => {
+              const ratio = ts.total > 0 ? Math.round((ts.done / ts.total) * 100) : 0;
               return (
                 <span
-                  key={t.tag}
-                  title={`#${t.tag} · ${t.done}/${t.total} 已完成`}
+                  key={ts.tag}
+                  title={t("tasks.tagTitle", { tag: ts.tag, done: ts.done, total: ts.total })}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -253,9 +256,9 @@ export default function TasksPanel({
                   }}
                 >
                   <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>
-                    #{t.tag}
+                    #{ts.tag}
                   </span>
-                  <span>{t.done}/{t.total}</span>
+                  <span>{ts.done}/{ts.total}</span>
                   <span
                     style={{
                       width: 28, height: 3,
@@ -328,6 +331,7 @@ function TaskGroup({
   highlightId?: string | null;
   rowRefs?: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
 }) {
+  const { t } = useT();
   const meta = GROUP_META[groupKey];
   return (
     <section>
@@ -350,7 +354,7 @@ function TaskGroup({
             textTransform: "uppercase",
           }}
         >
-          {meta.label}
+          {t(meta.labelKey)}
         </h2>
         <span
           style={{
@@ -363,6 +367,7 @@ function TaskGroup({
         </span>
       </div>
       <div
+        className="ap-card"
         style={{
           // [085] 卡片用更深的底，配边框 + 阴影，和较亮的面板拉开层次（立体）
           background: "var(--color-bg)",
@@ -407,12 +412,13 @@ function TaskRow({
   highlight?: boolean;
   rowRef?: (el: HTMLDivElement | null) => void;
 }) {
+  const { t } = useT();
   const [hov, setHov] = useState(false);
-  const displayDate = formatDate(item.dueDate);
+  const displayDate = formatDate(item.dueDate, t);
   return (
     <div
       ref={rowRef}
-      className={highlight ? "task-row-flash" : ""}
+      className={`ap-row${highlight ? " task-row-flash" : ""}`}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -429,7 +435,7 @@ function TaskRow({
 
       {/* Epic 4.2 紧急度色块(deadline 优先,无 deadline 则用 priority,都无则不显示) */}
       {(() => {
-        const u = computeUrgency(item);
+        const u = computeUrgency(item, t);
         if (!u) return null;
         return (
           <span
@@ -448,7 +454,7 @@ function TaskRow({
       <div
         style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
         onClick={() => onEdit(item)}
-        title="点击编辑"
+        title={t("tasks.editTip")}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <span
@@ -472,11 +478,11 @@ function TaskRow({
                 borderRadius: 4,
               }}
             >
-              进行中
+              {t("tasks.inProgress")}
             </span>
           )}
           {item.isGroupWork && (
-            <span title="小组作业" style={{ display: "inline-flex", color: "var(--color-info)" }}>
+            <span title={t("tasks.groupWork")} style={{ display: "inline-flex", color: "var(--color-info)" }}>
               <Users size={12} />
             </span>
           )}
@@ -537,7 +543,7 @@ function TaskRow({
                   e.stopPropagation();
                   onNotesPreview(item);
                 }}
-                title="点击查看完整备注"
+                title={t("tasks.notesTip")}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -553,7 +559,7 @@ function TaskRow({
                   fontFamily: "inherit",
                 }}
               >
-                📝 备注
+                {t("tasks.notes")}
               </button>
             )}
             {item.attachments?.map((att) => (
@@ -579,14 +585,14 @@ function TaskRow({
           pointerEvents: hov ? "auto" : "none",
         }}
       >
-        <RowIconBtn label="编辑" onClick={() => onEdit(item)}>
+        <RowIconBtn label={t("tasks.edit")} onClick={() => onEdit(item)}>
           <Pencil size={12} />
         </RowIconBtn>
         <RowIconBtn
-          label="删除"
+          label={t("tasks.delete")}
           danger
           onClick={() => {
-            if (confirm(`删除「${item.taskName}」？`)) onDelete(item.id);
+            if (confirm(t("tasks.deleteConfirm", { name: item.taskName }))) onDelete(item.id);
           }}
         >
           <Trash2 size={12} />
@@ -594,7 +600,7 @@ function TaskRow({
       </div>
 
       <span
-        title={`来源：${item.source}`}
+        title={t("tasks.source", { source: item.source })}
         style={{
           display: "flex",
           alignItems: "center",
@@ -704,6 +710,7 @@ function RowIconBtn({
 // 复选框
 // ============================================================
 function Checkbox({ checked, onClick }: { checked: boolean; onClick: () => void }) {
+  const { t } = useT();
   // 勾选完成时弹跳一下（配 task-complete 服务铃，观察.txt #1：音效配 UI 动画）
   const [popping, setPopping] = useState(false);
   const prevChecked = useRef(checked);
@@ -719,7 +726,7 @@ function Checkbox({ checked, onClick }: { checked: boolean; onClick: () => void 
   return (
     <button
       onClick={onClick}
-      aria-label={checked ? "标记未完成" : "标记完成"}
+      aria-label={checked ? t("tasks.checkUndone") : t("tasks.checkDone")}
       className={popping ? "fx-pop" : undefined}
       style={{
         width: 18,
@@ -825,16 +832,11 @@ function PrimaryBtn({
 // ============================================================
 // 空状态
 // ============================================================
-// #16 推荐每日任务：降低启动门槛，一键添加
-const RECOMMENDED_TASKS = [
-  "复习今天的笔记 25 分钟",
-  "规划明天的 3 件事",
-  "整理待办收件箱",
-  "运动 / 散步 15 分钟",
-  "读 10 页书",
-];
+// #16 推荐每日任务：降低启动门槛，一键添加（文案走 i18n key）
+const RECOMMENDED_TASK_KEYS = ["tasks.rec.1", "tasks.rec.2", "tasks.rec.3", "tasks.rec.4", "tasks.rec.5"];
 
 function EmptyState({ onCreate, onQuickAdd }: { onCreate: () => void; onQuickAdd?: (title: string) => void }) {
+  const { t } = useT();
   return (
     <div
       style={{
@@ -850,10 +852,10 @@ function EmptyState({ onCreate, onQuickAdd }: { onCreate: () => void; onQuickAdd
         <EmptyTasks size={180} />
       </div>
       <p style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)", margin: "0 0 6px" }}>
-        还没有任何任务
+        {t("tasks.empty.title")}
       </p>
       <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "0 0 8px" }}>
-        切到 <strong style={{ color: "var(--color-text)" }}>Chat</strong> 上传课件，或点下方按钮手动添加
+        {t("tasks.empty.descA")}<strong style={{ color: "var(--color-text)" }}>Chat</strong>{t("tasks.empty.descB")}
       </p>
       {/* Epic 6.5 管家小气泡 */}
       <p
@@ -868,25 +870,26 @@ function EmptyState({ onCreate, onQuickAdd }: { onCreate: () => void; onQuickAdd
           margin: "0 0 16px",
         }}
       >
-        ☕「放假了？让我陪你休息一下」— Butler
+        {t("tasks.empty.butler")}
       </p>
 
       {/* #16 推荐任务：一键启动，降低门槛 */}
       {onQuickAdd && (
         <div style={{ marginBottom: 18 }}>
           <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--color-text-faint)", margin: "0 0 8px" }}>
-            管家推荐 · 点一下即添加
+            {t("tasks.empty.recommend")}
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", maxWidth: 460, margin: "0 auto" }}>
-            {RECOMMENDED_TASKS.map((t) => (
-              <RecommendChip key={t} label={t} onClick={() => onQuickAdd(t)} />
-            ))}
+            {RECOMMENDED_TASK_KEYS.map((k) => {
+              const label = t(k);
+              return <RecommendChip key={k} label={label} onClick={() => onQuickAdd(label)} />;
+            })}
           </div>
         </div>
       )}
 
       <div>
-        <PrimaryBtn onClick={onCreate} icon={<Plus size={14} />} label="New Task" />
+        <PrimaryBtn onClick={onCreate} icon={<Plus size={14} />} label={t("tasks.newTask")} />
       </div>
     </div>
   );
@@ -921,6 +924,7 @@ function RecommendChip({ label, onClick }: { label: string; onClick: () => void 
 }
 
 function ViewEmptyState({ viewTitle }: { viewTitle: string }) {
+  const { t } = useT();
   return (
     <div
       style={{
@@ -934,24 +938,24 @@ function ViewEmptyState({ viewTitle }: { viewTitle: string }) {
       {/* [056] 漏斗插画：视图筛选为空 */}
       <div style={{ marginBottom: 8 }}><EmptyFilter size={88} /></div>
       <p style={{ fontSize: 14, color: "var(--color-text-muted)", margin: 0 }}>
-        当前视图「{viewTitle}」下没有任务
+        {t("tasks.viewEmpty", { view: viewTitle })}
       </p>
       <p style={{ fontSize: 12, color: "var(--color-text-faint)", margin: "6px 0 0" }}>
-        切换左侧 Views 看其他视图
+        {t("tasks.viewEmptyHint")}
       </p>
     </div>
   );
 }
 
-function formatDate(iso: string): string {
-  if (!iso) return "待定";
+function formatDate(iso: string, t: TFunc): string {
+  if (!iso) return t("tasks.date.tbd");
   const d = new Date(iso);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diff = Math.floor((d.getTime() - today.getTime()) / 86400000);
-  if (diff === 0) return "今天";
-  if (diff === 1) return "明天";
-  if (diff === -1) return "昨天";
-  if (diff > 0 && diff < 7) return `${diff} 天后`;
-  return `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+  if (diff === 0) return t("tasks.date.today");
+  if (diff === 1) return t("tasks.date.tomorrow");
+  if (diff === -1) return t("tasks.date.yesterday");
+  if (diff > 0 && diff < 7) return t("tasks.date.inDays", { days: diff });
+  return t("tasks.date.md", { m: d.getMonth() + 1, d: d.getDate() });
 }

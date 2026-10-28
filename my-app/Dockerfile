@@ -1,29 +1,38 @@
-FROM node:20-bookworm-slim AS builder
-
-RUN corepack enable \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends python3 make g++ \
-    && rm -rf /var/lib/apt/lists/*
+FROM node:20-alpine AS deps
 
 WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY packages/ai-core/package.json packages/ai-core/package.json
+COPY packages/database/package.json packages/database/package.json
+COPY packages/workflows/package.json packages/workflows/package.json
+
+RUN pnpm install --frozen-lockfile
+
+FROM deps AS builder
+
+ENV NEXT_TELEMETRY_DISABLED=1
 COPY . .
-RUN pnpm install --frozen-lockfile \
-    && pnpm --filter @smart-hub/web build
+RUN pnpm --filter @smart-hub/web build
 
-FROM node:20-bookworm-slim AS runner
-
-ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
-    HOSTNAME=0.0.0.0 \
-    PORT=3000
+FROM node:20-alpine AS runner
 
 WORKDIR /app
-COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder /app/apps/web/public ./apps/web/public
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
-USER node
-WORKDIR /app/apps/web
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nextjs
+
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+COPY --from=builder /app ./
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+
+USER nextjs
 EXPOSE 3000
-CMD ["node", "server.js"]
 
+CMD ["pnpm", "--filter", "@smart-hub/web", "start"]

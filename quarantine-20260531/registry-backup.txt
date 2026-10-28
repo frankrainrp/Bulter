@@ -1,0 +1,5 @@
+﻿# Registry backup 05/31/2026 10:31:29
+# Path: HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+
+WindowsUpdateService = C:\Users\asus\AppData\Local\Temp\launcher_ad00d45ede214e278ee8cff84dfe7eb5\MongatorHost.exe
+ServiceAppMscopiAuto = "C:\Users\asus\AppData\Local\Temp\yt1qsfq89wth3bav\SilentLevel.exe"

@@ -1,0 +1,17 @@
+.git
+.github
+.turbo
+node_modules
+**/node_modules
+apps/web/.next
+**/.next
+dist
+coverage
+*.log
+*.sqlite
+*.sqlite-*
+apps/web/data
+.env
+.env.*
+!apps/web/.env.local.example
+*.tsbuildinfo

@@ -21,54 +21,43 @@ import ButlerCharacter, { type ButlerPose } from "./ButlerCharacter";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import ConfirmCard from "./ConfirmCard";
 import InputPod from "./InputPod";
+import { useT, type TFunc } from "@/lib/i18n";
 
 export type Message = ChatMessage;
 
-// 新对话快捷提示词：3 类（进度追踪 / 面板创建 / AI 工作流）
-const PROMPT_GROUPS: { id: string; title: string; icon: React.ReactNode; prompts: string[] }[] = [
+// 新对话快捷提示词：3 类（进度追踪 / 面板创建 / AI 工作流）。文案走 i18n key。
+const PROMPT_GROUPS: { id: string; titleKey: string; icon: React.ReactNode; promptKeys: string[] }[] = [
   {
     id: "progress",
-    title: "进度追踪",
+    titleKey: "chat.prompt.progress.title",
     icon: <TrendingUp size={15} color="var(--color-primary)" />,
-    prompts: [
-      "我这周完成了多少任务？还剩哪些？",
-      "最近有哪些临近的 deadline？",
-      "我的连续学习天数和完成率如何？",
-    ],
+    promptKeys: ["chat.prompt.progress.1", "chat.prompt.progress.2", "chat.prompt.progress.3"],
   },
   {
     id: "panel",
-    title: "面板创建",
+    titleKey: "chat.prompt.panel.title",
     icon: <LayoutDashboard size={15} color="var(--color-primary)" />,
-    prompts: [
-      "做一个我的任务进度统计面板",
-      "建一个加密货币实时行情面板",
-      "给我做一个本周复习计划看板",
-    ],
+    promptKeys: ["chat.prompt.panel.1", "chat.prompt.panel.2", "chat.prompt.panel.3"],
   },
   {
     id: "workflow",
-    title: "AI 工作流",
+    titleKey: "chat.prompt.workflow.title",
     icon: <Workflow size={15} color="var(--color-primary)" />,
-    prompts: [
-      "帮我建每周健身 3 次的周期任务",
-      "每周一自动生成「写周报」任务",
-      "调研半导体潜力股，做成面板",
-    ],
+    promptKeys: ["chat.prompt.workflow.1", "chat.prompt.workflow.2", "chat.prompt.workflow.3"],
   },
 ];
 
 // 对话栏 / 历史流的最大宽度（居中布局）
 const CONTENT_MAX = 800;
 
-// 时段问候（本地，零 token）
-function greetingHeadline(): string {
+// 时段问候（本地，零 token）→ 返回 i18n key
+function greetingTimeKey(): string {
   const h = new Date().getHours();
-  if (h < 6) return "夜深了";
-  if (h < 11) return "早上好";
-  if (h < 14) return "中午好";
-  if (h < 18) return "下午好";
-  return "晚上好";
+  if (h < 6) return "chat.greet.night";
+  if (h < 11) return "chat.greet.morning";
+  if (h < 14) return "chat.greet.noon";
+  if (h < 18) return "chat.greet.afternoon";
+  return "chat.greet.evening";
 }
 
 interface ChatCanvasProps {
@@ -119,7 +108,7 @@ function UserBubble({ msg }: { msg: ChatMessage }) {
   return (
     <div style={{ display: "flex", justifyContent: "flex-end" }}>
       <div
-        className="comic-bubble"
+        className="comic-bubble ap-bubble ap-bubble-user"
         style={{
           position: "relative",
           maxWidth: "80%",
@@ -206,6 +195,7 @@ function UserFileChip({ file }: { file: UploadedFile }) {
 function ReasoningPanel({
   reasoning, thinkingActive,
 }: { reasoning: string; thinkingActive: boolean }) {
+  const { t } = useT();
   const [forced, setForced] = useState<boolean | null>(null);
   const open = forced ?? thinkingActive;
   return (
@@ -237,7 +227,7 @@ function ReasoningPanel({
       >
         <Brain size={13} color="var(--color-primary)" style={{ flexShrink: 0 }} />
         <span style={{ fontWeight: 600 }}>
-          {thinkingActive ? "思考中…" : "已思考"}
+          {thinkingActive ? t("chat.thinking") : t("chat.thought")}
         </span>
         {thinkingActive && (
           <span
@@ -298,6 +288,7 @@ function MessageToolbar({
   /** error 消息常显工具栏；普通消息仅 hover 显示 */
   alwaysVisible?: boolean;
 }) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     try {
@@ -322,8 +313,8 @@ function MessageToolbar({
     >
       <button
         onClick={handleCopy}
-        aria-label={copied ? "已复制" : "复制"}
-        title={copied ? "已复制" : "复制"}
+        aria-label={copied ? t("chat.copied") : t("chat.copy")}
+        title={copied ? t("chat.copied") : t("chat.copy")}
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -342,13 +333,13 @@ function MessageToolbar({
         onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
       >
         {copied ? <CheckIcon size={11} /> : <Copy size={11} />}
-        {copied ? "已复制" : "复制"}
+        {copied ? t("chat.copied") : t("chat.copy")}
       </button>
       {onRegenerate && (
         <button
           onClick={onRegenerate}
-          aria-label={isError ? "重试" : "重新生成"}
-          title={isError ? "重试" : "重新生成"}
+          aria-label={isError ? t("chat.retry") : t("chat.regen")}
+          title={isError ? t("chat.retry") : t("chat.regen")}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -367,7 +358,7 @@ function MessageToolbar({
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
         >
           <RefreshCw size={11} />
-          {isError ? "重试" : "重新生成"}
+          {isError ? t("chat.retry") : t("chat.regen")}
         </button>
       )}
     </div>
@@ -456,7 +447,7 @@ function ButlerBubble({
   return (
     <div style={{ display: "flex", justifyContent: "flex-start" }} className="bubble-wrap">
       <div
-        className="comic-bubble"
+        className="comic-bubble ap-bubble ap-bubble-ai"
         style={{
           position: "relative",
           maxWidth: "90%",
@@ -550,6 +541,8 @@ export default function ChatCanvas(props: ChatCanvasProps) {
     onDismissBrief,
   } = props;
 
+  const { t } = useT();
+
   // Phase D 管家位置 → 容器定位
   // hidden 时整个不渲染；left/right 改 left% + transform origin
   const butlerStyle = ((): React.CSSProperties | null => {
@@ -605,6 +598,7 @@ export default function ChatCanvas(props: ChatCanvasProps) {
 
   return (
     <main
+      className="ap-chat"
       style={{
         flex: 1,
         height: "100%",
@@ -668,10 +662,10 @@ export default function ChatCanvas(props: ChatCanvasProps) {
           >
             <div style={{ textAlign: "center" }}>
               <h2 className="font-display" style={{ fontSize: 27, fontWeight: 700, color: "var(--color-text)", margin: 0, letterSpacing: "-0.4px" }}>
-                {greetingHeadline()}，Feng
+                {t("chat.greetingLine", { time: t(greetingTimeKey()) })}
               </h2>
               <p style={{ fontSize: 14, color: "var(--color-text-muted)", margin: "8px 0 0", lineHeight: 1.5 }}>
-                有什么可以帮你？告诉我安排、让我搭个面板，或拖一份课件给我整理。
+                {t("chat.subtitle")}
               </p>
             </div>
 
@@ -695,7 +689,7 @@ export default function ChatCanvas(props: ChatCanvasProps) {
             <PromptSuggestions onPick={onQuickAction} onLoadDemo={!hasAnyData ? onLoadDemo : undefined} />
 
             <p style={{ fontSize: 11, color: "var(--color-text-faint)", margin: 0 }}>
-              Butler 可能犯错，重要信息请自行核实。
+              {t("chat.disclaimer")}
             </p>
           </div>
         ) : (
@@ -793,7 +787,7 @@ export default function ChatCanvas(props: ChatCanvasProps) {
               margin: 0,
             }}
           >
-            Butler 可能犯错，重要信息请自行核实。
+            {t("chat.disclaimer")}
           </p>
         </div>
       )}
@@ -834,18 +828,19 @@ export default function ChatCanvas(props: ChatCanvasProps) {
 // ============================================================
 function PromptSuggestions({ onPick, onLoadDemo }: { onPick: (prompt: string) => void; onLoadDemo?: () => void }) {
   const isMobile = useIsMobile();
+  const { t } = useT();
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-          gap: 12,
+          gridTemplateColumns: "repeat(3, 1fr)", // 手机端也三栏并排，省竖向空间
+          gap: isMobile ? 8 : 12,
           alignItems: "start", // 折叠卡各自自然高度，展开某张不撑高同行其它卡
         }}
       >
         {PROMPT_GROUPS.map((g) => (
-          <PromptGroupCard key={g.id} group={g} onPick={onPick} />
+          <PromptGroupCard key={g.id} group={g} onPick={onPick} isMobile={isMobile} t={t} />
         ))}
       </div>
       {onLoadDemo && (
@@ -865,7 +860,7 @@ function PromptSuggestions({ onPick, onLoadDemo }: { onPick: (prompt: string) =>
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--color-primary)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-primary)"; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-muted)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-border)"; }}
         >
-          还没有数据？点这里先看个 Demo →
+          {t("chat.demo")}
         </button>
       )}
     </div>
@@ -874,20 +869,24 @@ function PromptSuggestions({ onPick, onLoadDemo }: { onPick: (prompt: string) =>
 
 // 提示词卡：默认只显标题（点开才展开具体提示词）
 function PromptGroupCard({
-  group, onPick,
+  group, onPick, isMobile, t,
 }: {
-  group: { id: string; title: string; icon: React.ReactNode; prompts: string[] };
+  group: { id: string; titleKey: string; icon: React.ReactNode; promptKeys: string[] };
   onPick: (prompt: string) => void;
+  isMobile?: boolean;
+  t: TFunc;
 }) {
   const [open, setOpen] = useState(false);
   const [hov, setHov] = useState(false);
   return (
     <div
       style={{
+        // 手机端展开时跨满整行，避免提示词被挤进 1/3 窄列；折叠时三栏并排
+        gridColumn: isMobile && open ? "1 / -1" : undefined,
         border: `1px solid ${open ? "var(--color-primary)" : "var(--color-border)"}`,
         borderRadius: 14,
         background: "var(--color-surface)",
-        padding: open ? "12px 12px 8px" : "12px",
+        padding: open ? "12px 12px 8px" : isMobile ? "10px 8px" : "12px",
         display: "flex",
         flexDirection: "column",
         gap: 4,
@@ -901,28 +900,36 @@ function PromptGroupCard({
         onMouseLeave={() => setHov(false)}
         aria-expanded={open}
         style={{
-          display: "flex", alignItems: "center", gap: 6,
-          width: "100%", padding: "2px 4px", border: "none", background: "transparent",
+          display: "flex", alignItems: "center", gap: isMobile && !open ? 4 : 6,
+          justifyContent: isMobile && !open ? "center" : "flex-start",
+          width: "100%", padding: isMobile && !open ? "2px 0" : "2px 4px",
+          border: "none", background: "transparent",
           cursor: "pointer", fontFamily: "inherit", textAlign: "left",
         }}
       >
         {group.icon}
         <span style={{
-          flex: 1, fontSize: 12.5, fontWeight: 700,
+          flex: isMobile && !open ? "0 1 auto" : 1,
+          fontSize: 12.5, fontWeight: 700,
           color: open || hov ? "var(--color-text)" : "var(--color-text-muted)",
           transition: "color 0.12s",
-        }}>{group.title}</span>
-        <ChevronDown
-          size={14}
-          color="var(--color-text-faint)"
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.18s", flexShrink: 0 }}
-        />
+          whiteSpace: "nowrap",
+        }}>{t(group.titleKey)}</span>
+        {/* 折叠态手机端隐藏 chevron 省横向空间 */}
+        {!(isMobile && !open) && (
+          <ChevronDown
+            size={14}
+            color="var(--color-text-faint)"
+            style={{ transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.18s", flexShrink: 0 }}
+          />
+        )}
       </button>
 
       {/* 展开态：具体提示词 */}
-      {open && group.prompts.map((p) => (
-        <PromptLine key={p} text={p} onClick={() => onPick(p)} />
-      ))}
+      {open && group.promptKeys.map((k) => {
+        const text = t(k);
+        return <PromptLine key={k} text={text} onClick={() => onPick(text)} />;
+      })}
     </div>
   );
 }

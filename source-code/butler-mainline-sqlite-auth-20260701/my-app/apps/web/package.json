@@ -1,0 +1,38 @@
+{
+  "name": "@smart-hub/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@smart-hub/ai-core": "workspace:*",
+    "@smart-hub/database": "workspace:*",
+    "@smart-hub/workflows": "workspace:*",
+    "better-sqlite3": "^12.11.1",
+    "dexie": "^4.4.2",
+    "lucide-react": "^1.16.0",
+    "next": "^14.2.0",
+    "openai": "^4.47.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "unpdf": "^1.6.2",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.4.0"
+  }
+}

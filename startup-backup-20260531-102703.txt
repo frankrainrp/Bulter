@@ -1,0 +1,19 @@
+﻿# 启动项禁用备份 2026-05-31
+# 这些项已从 HKCU 和 HKLM 的 Run 注册表中删除
+# 如需恢复某项，打开 regedit 进入对应路径，新建"字符串值(REG_SZ)"，名称和数据照填
+
+# === HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run ===
+OneDrive = "C:\Program Files\Microsoft OneDrive\OneDrive.exe" /background
+LetsPRO = "C:\Program Files (x86)\letsvpn\app-3.16.0\LetsPRO.exe" /silent
+Thunder = F:\Thunder\Program\Thunder.exe -silent -StartType:AutoRun
+EpicGamesLauncher = "F:\Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe" -silent -launchcontext=boot
+quark = "C:\Users\asus\AppData\Local\Programs\Quark\quark.exe" --launch-from=loginitem
+QuarkUpdaterTaskUser1.0.0.18 = "C:\Users\asus\AppData\Local\QuarkUpdater\QuarkUpdater\1.0.0.18\updater.exe" --wake --enable-logging
+Microsoft.Lists = C:\Program Files\Microsoft OneDrive\26.078.0426.0002\OneDrive.Sync.Service.exe
+IDMan = C:\Program Files (x86)\Internet Download Manager\IDMan.exe /onboot
+CiscoSpark = "C:\Users\asus\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Webex\Webex.lnk" /minimized /autostartedWithWindows=true
+Docker Desktop = C:\Program Files\Docker\Docker\Docker Desktop.exe
+electron.app.Notion = "C:\Users\asus\AppData\Local\Programs\Notion\Notion.exe" --open-at-login
+
+# === HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run ===
+Everything = "C:\Program Files\Everything\Everything.exe" -startup

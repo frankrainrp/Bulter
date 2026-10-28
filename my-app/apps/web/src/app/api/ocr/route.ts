@@ -15,13 +15,21 @@ import {
   getOcrProviderMeta,
   type OcrProviderId,
 } from "@/lib/ocr/providers";
+import { rateLimited } from "@/lib/api-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 
+// SEC-09：只接受图片 / PDF，挡掉任意二进制被当文档转发给上游
+const ALLOWED_MIME = /^(image\/(png|jpe?g|webp|gif|bmp|tiff?)|application\/pdf)$/i;
+const ALLOWED_EXT = /\.(png|jpe?g|webp|gif|bmp|tiff?|pdf)$/i;
+
 export async function POST(req: Request) {
+  const limited = rateLimited(req, 10); // SEC-05：OCR 单价高，限额收紧到 10/10s
+  if (limited) return limited;
+
   // 1. 选 provider（环境变量 OCR_PROVIDER，默认 mistral）
   const providerEnv = process.env.OCR_PROVIDER || DEFAULT_OCR_PROVIDER;
   const providerId: OcrProviderId = isValidOcrProviderId(providerEnv) ? providerEnv : DEFAULT_OCR_PROVIDER;
@@ -61,6 +69,10 @@ export async function POST(req: Request) {
   if (file.size === 0) return jsonErr("空文件", 400);
   if (file.size > MAX_BYTES) {
     return jsonErr(`文件过大：${(file.size / 1024 / 1024).toFixed(1)} MB（上限 50 MB）`, 413);
+  }
+  // SEC-09：类型校验（MIME 或扩展名命中其一即可，兼容浏览器空 MIME）
+  if (!ALLOWED_MIME.test(file.type || "") && !ALLOWED_EXT.test(file.name || "")) {
+    return jsonErr(`不支持的文件类型（仅图片 / PDF）：${file.type || file.name || "未知"}`, 415);
   }
   if (file.size > 10 * 1024 * 1024) {
     console.warn(`[ocr] 大文件 ${(file.size / 1024 / 1024).toFixed(1)} MB，可能较慢`);
