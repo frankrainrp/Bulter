@@ -1168,7 +1168,8 @@ function ButlerApp() {
   const handleToggleComplete = useCallback((id: string) => {
     setDdls((prev) => prev.map((d) => {
       if (d.id !== id) return d;
-      const next = { ...d, completed: !d.completed };
+      const completed = !(d.completed || d.status === "done");
+      const next = { ...d, completed, status: completed ? "done" as const : "todo" as const };
       // [056] 音效（opt-in 守卫在 playSound 内置）
       playSound(next.completed ? "task-complete" : "task-uncomplete");
       return next;
