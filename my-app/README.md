@@ -1,27 +1,8 @@
-# Butler - C270 Final Project
+# Butler
 
-Butler is an AI-driven personal learning manager for students. It combines a
-study chat interface, tasks, calendar planning, notes, document processing,
-custom dashboards, and usage controls into one web application.
+Butler is an AI study agent that helps users manage daily study tasks, set goals and keep track of notes. Custom panels let users build a study workspace around their own needs.
 
-This submission packages Butler as a C270 LaunchLab final project. The focus is
-not only the application, but also the DevOps workflow around it: version
-control, CI/CD, Docker containerisation, repeatable deployment, validation,
-security scanning, and monitoring.
-
-## Team 2
-
-| Member | App feature ownership | DevOps ownership | Contribution |
-| --- | --- | --- | --- |
-| Feng Kaiduo | Core architecture, AI chat, integration | CI/CD and integration lead | 26% |
-| Yu Fei | Tasks and recurring task workflows | Docker containerisation | 15% |
-| Ei Htet Htet Tun | Calendar and schedule planning | Deployment workflow | 15% |
-| Hein Thu Nyi Nyi (June) | Notes and study content workflows | Ansible / IaC | 15% |
-| Sherlyn | Quality checks and user validation | Testing and security gate | 15% |
-| Khen | AI panel / data-source workflows | Monitoring and documentation | 14% |
-
-The contribution table must match the final GitHub commit and PR history before
-uploading to LMS.
+An independent personal project, designed and developed by Feng Kaiduo.
 
 ## Local Development
 

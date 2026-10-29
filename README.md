@@ -1,5 +1,9 @@
 # Butler
 
+Butler is an AI study agent that helps users manage daily study tasks, set goals and keep track of notes. Custom panels let users build a study workspace around their own needs.
+
+An independent personal project, designed and developed by Feng Kaiduo.
+
 [Download source (main ZIP)](https://github.com/frankrainrp/Bulter/archive/refs/heads/main.zip) · [Demo walkthrough](docs/DEMO.md)
 
 ## Open the project

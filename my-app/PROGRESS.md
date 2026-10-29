@@ -1,7 +1,11 @@
 # 📋 项目进度记录 — 智能多模态学习管家
 
 > 每一次有效改动都记录在此文件中，按时间倒序排列（最新在最上方）。
-> 格式：`## [序号] YYYY-MM-DD HH:mm — 改动标题`
+> 格式：`## [099] 2026-10-29 - Clarify the public product description
+
+Updated the public product introduction to describe Butler as an AI study agent for tasks, goals, notes and custom panels. The root and application READMEs now share the same introduction and personal-project attribution. Removed the course-submission front matter from the application README; the existing reports, setup instructions and runtime code are unchanged.
+
+## [序号] YYYY-MM-DD HH:mm — 改动标题`
 
 ## 📚 全部条目索引（点标题跳详细内容）
 
