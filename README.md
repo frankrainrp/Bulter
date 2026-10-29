@@ -1,6 +1,6 @@
 # Butler
 
-[Download source (main ZIP)](https://github.com/frankrainrp/Bulter/archive/refs/heads/main.zip)
+[Download source (main ZIP)](https://github.com/frankrainrp/Bulter/archive/refs/heads/main.zip) · [Demo walkthrough](docs/DEMO.md)
 
 ## Open the project
 
