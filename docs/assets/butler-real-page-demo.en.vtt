@@ -1,0 +1,38 @@
+WEBVTT
+
+NOTE
+Optional English descriptions of actual recorded UI actions.
+Manual task flow only. No generated AI response or automated run is shown.
+Original labels, including Chinese labels, remain unchanged in the video.
+
+1
+00:00:00.018 --> 00:00:02.090
+Start with the real task list.
+
+2
+00:00:02.090 --> 00:00:04.046
+Open the native New Task form.
+
+3
+00:00:04.046 --> 00:00:06.523
+Enter the task name, tags, and description manually.
+
+4
+00:00:06.523 --> 00:00:09.201
+Save "Review database transactions" to the task list.
+
+5
+00:00:09.201 --> 00:00:12.077
+View the same saved task in Calendar.
+
+6
+00:00:12.077 --> 00:00:13.621
+Return to Tasks and mark the task done.
+
+7
+00:00:13.621 --> 00:00:17.963
+The saved task appears in Completed.
+
+8
+00:00:17.963 --> 00:00:21.033
+Reload the page and confirm the completed task remains.

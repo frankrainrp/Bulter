@@ -1,5 +1,10 @@
 # 📋 项目进度记录 — 智能多模态学习管家
 
+## [100] 2026-10-29 — Add the recorded task walkthrough
+
+Added a real application video, poster and optional English captions to the root README and demo guide. The walkthrough follows a manually created study task through Calendar, completion and a browser reload. Setup instructions and the public source download remain available.
+
+
 > 每一次有效改动都记录在此文件中，按时间倒序排列（最新在最上方）。
 > 格式：`## [099] 2026-10-29 - Clarify the public product description
 

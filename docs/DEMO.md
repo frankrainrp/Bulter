@@ -2,6 +2,25 @@
 
 [Download source from main](https://github.com/frankrainrp/Bulter/archive/refs/heads/main.zip)
 
+## Watch the recorded walkthrough
+
+This 21-second recording shows the real Butler application with fictional study data. English mode is selected; some original labels remain in Chinese.
+
+[![Watch the Butler task walkthrough](assets/butler-real-page-demo-poster.jpg)](assets/butler-real-page-demo.mp4)
+
+[Watch MP4](assets/butler-real-page-demo.mp4) · [Download MP4](https://raw.githubusercontent.com/frankrainrp/Bulter/main/docs/assets/butler-real-page-demo.mp4) · [English captions](assets/butler-real-page-demo.en.vtt)
+
+## Recorded steps
+
+1. Open **Tasks** and select **New Task**.
+2. Enter **Review database transactions** as the title. Keep the default due date and time, choose **High** priority, and add the **SQL** and **Revision** tags.
+3. Enter **Read the transaction notes and write a revision checklist.** as the description, then select **Create**.
+4. Open **Calendar** and view the saved task.
+5. Return to **Tasks**, select **Mark as done**, and open **Completed**.
+6. Reload the browser page, return to **Tasks**, and open **Completed** again. The same task remains completed.
+
+The clip demonstrates manual task creation, the calendar view, completion, and persistence after reloading. It does not include a generated AI reply.
+
 ## Start the application
 
 Use Node.js 20 or newer and pnpm 9, as specified by the workspace. After extracting the ZIP, open a terminal in `Bulter-main/my-app`:
@@ -15,20 +34,7 @@ pnpm dev
 
 Open the local address printed by the development server. Create a local demo account, then choose English in the language control or Preferences.
 
-The application workspace is `my-app/`. The separate MCP server is in `butler-mcp/`; it is not required for this walkthrough.
-
-## Follow one study task
-
-Use fictional records in a fresh browser profile or a separate local origin.
-
-1. Open **Tasks** and select **New Task**.
-2. Enter **Review SQLite transactions** as the title, add a short description, and choose a due date.
-3. Save the task and open it from the list to check its details.
-4. Open **Calendar** and find the same task on its due date.
-5. Return to **Tasks**, complete the task, and open **Completed** to see its final state.
-6. Reload the page and check that the task is still completed.
-
-This sequence demonstrates manual task planning, the calendar view, and browser persistence. It does not require a generated AI reply.
+The application workspace is `my-app/`. The separate MCP server is in `butler-mcp/`; it is not required for this walkthrough. To repeat the recorded task flow, use fictional records in a fresh browser profile or a separate local origin.
 
 ## Optional features
 
