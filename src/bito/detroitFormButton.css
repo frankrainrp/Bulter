@@ -1,0 +1,8 @@
+.detroit-form-button { position: relative; isolation: isolate; cursor: pointer; height: 48px; min-width: 48px; padding: 0 11px; border: 0; background: transparent; font: 13px/1.15 LarkeBold, system-ui, sans-serif; }
+.detroit-form-button-size { visibility: hidden; white-space: nowrap; }
+.detroit-form-button:disabled { cursor: default; opacity: .56; }
+.detroit-form-button:focus-visible { outline: 2px solid #1371bf; outline-offset: 0; }
+@media (forced-colors: active) {
+  .detroit-form-button:focus-visible { outline-color: Highlight; }
+  .detroit-form-button .dui-source-button__label span { color: ButtonText !important; }
+}

@@ -1,0 +1,33 @@
+.dui-screen-transition {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.dui-screen-transition--viewport { position: fixed }
+.dui-screen-transition--backwards { flex-direction: column-reverse }
+
+.dui-screen-transition > div {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.dui-screen-transition--center > div { position: relative }
+.dui-screen-transition--center > div::before,
+.dui-screen-transition--center > div::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  background: currentColor;
+  transform: scaleX(var(--dui-scan-cover, 0));
+  will-change: transform;
+}
+.dui-screen-transition--center > div::before { left: 0; transform-origin: left }
+.dui-screen-transition--center > div::after { right: 0; transform-origin: right }

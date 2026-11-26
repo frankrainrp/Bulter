@@ -1,0 +1,42 @@
+.orb-reply {
+  --orb-size: clamp(96px, 12vw, 136px);
+  --orb-stage-height: clamp(136px, 18vw, 198px);
+  position: relative;
+  min-width: 0;
+}
+
+.orb-reply[data-orb-stage="cycle"],
+.orb-reply[data-orb-stage="waiting"] {
+  min-height: var(--orb-stage-height);
+}
+.orb-reply__indicator {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 auto;
+  height: var(--orb-stage-height);
+  pointer-events: none;
+}
+
+.orb-reply__orb {
+  display: block;
+  width: var(--orb-size);
+  height: var(--orb-size);
+  pointer-events: none;
+  transform-origin: center;
+}
+.orb-reply__answer[aria-hidden="true"] {
+  position: absolute;
+  inset: 0 0 auto;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.orb-reply__answer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+}

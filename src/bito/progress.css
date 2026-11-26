@@ -1,0 +1,34 @@
+/* Extracted from Bito b0cc94418bc91dc84bf379e06a148a6f89b1bc80, familyos/static/detroit-ui.css. */
+.dui-progress{
+  --dui-progress-value:0%;
+  --dui-progress-color:var(--dui-color-source-blue);
+  position:relative;
+  display:grid;
+  grid-template-columns:34px 1fr;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  min-width:220px;
+  color:var(--dui-progress-color);
+}
+.dui-progress__head{height:24px;display:grid;grid-template-columns:2px 5px 5px;gap:5px;align-items:center;justify-content:end}
+.dui-progress__head i{display:block;background:currentColor;box-shadow:0 0 6px color-mix(in srgb,currentColor 36%,transparent)}
+.dui-progress__head i:nth-child(1){width:2px;height:18px;opacity:.50}
+.dui-progress__head i:nth-child(2),.dui-progress__head i:nth-child(3){width:5px;height:20px;opacity:1}
+.dui-progress__track{position:relative;height:32px;overflow:visible;background:transparent}
+.dui-progress__svg{position:absolute;left:0;right:0;top:9px;width:100%;height:14px;overflow:visible}
+.dui-progress__fill{fill:currentColor}
+.dui-progress__scan{fill:url(#dui-progress-scan-gradient);opacity:.88;animation:dui-progress-scan-svg 1.48s linear infinite}
+@keyframes dui-progress-scan-svg{from{transform:translateX(-30px)}to{transform:translateX(130px)}}
+.dui-progress__marker-square,.dui-progress__marker-stem{fill:currentColor}
+.dui-progress__marker-group{opacity:.96}
+.dui-progress:not(.has-marker) .dui-progress__marker-group{display:none}
+.dui-progress[data-motion="none"] .dui-progress__scan{display:none}
+.dui-progress__value-label{position:absolute;right:0;bottom:calc(100% + 8px);font-family:var(--dui-font-bold);font-size:10px;letter-spacing:.08em;color:currentColor;opacity:.72;font-variant-numeric:tabular-nums;pointer-events:none}
+.dui-progress.is-special{--dui-progress-color:var(--dui-color-accent-special)}
+
+.bito-progress.dui-progress{min-width:0}
+.bito-progress[data-offscreen] .dui-progress__scan{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){
+  .bito-progress .dui-progress__scan{display:none;animation:none}
+}

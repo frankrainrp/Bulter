@@ -1,0 +1,14 @@
+.agent-orb-mark, .agent-robot-mark { display: inline-flex; pointer-events: none; }
+.agent-robot-mark { transform-origin: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .agent-robot-mark { transition: transform 140ms ease-out; }
+  .agent-robot-mark[data-selected="true"] svg { animation: agent-robot-lift 260ms ease-out; }
+  @media (hover: hover) {
+    [role="tab"]:hover .agent-robot-mark { transform: rotate(-5deg); }
+  }
+  [role="tab"]:active .agent-robot-mark { transform: scale(.94); }
+}
+@keyframes agent-robot-lift {
+  0%, 100% { transform: translateY(0); }
+  38% { transform: translateY(-1.5px); }
+}

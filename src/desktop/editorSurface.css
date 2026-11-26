@@ -1,0 +1,29 @@
+.butler-editor-drawer, .butler-editor-page {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  box-sizing: border-box;
+  color: inherit;
+}
+.butler-editor-drawer[open], .butler-editor-page[open] { display: flex; flex-direction: column; }
+.butler-editor-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(460px, 52vw);
+  max-width: 100%;
+  height: 100dvh;
+  max-height: none;
+  background: #fafafa;
+}
+.butler-editor-drawer::backdrop { background: rgba(23, 40, 52, .25); }
+.butler-editor-page {
+  position: relative;
+  inset: auto;
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  background: transparent;
+}

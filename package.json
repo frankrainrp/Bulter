@@ -1,5 +1,36 @@
 {
-	"dependencies": {
-		"@huggingface/transformers": "^4.2.0"
-	}
+  "name": "bito-c304",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "vite --host 127.0.0.1 --port 3000",
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "6.20.4",
+    "@codemirror/commands": "6.11.1",
+    "@codemirror/lang-markdown": "6.5.2",
+    "@codemirror/language": "6.13.1",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.15",
+    "@lezer/markdown": "1.8.1",
+    "fflate": "0.8.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "react-native-web": "0.21.4",
+    "thinking-orbs": "0.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.2",
+    "@xmldom/xmldom": "0.8.15",
+    "vite": "8.3.5"
+  }
 }

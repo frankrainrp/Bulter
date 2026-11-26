@@ -1,0 +1,223 @@
+/* SourceButton layer and timing rules from Bito's bundled Detroit stylesheet
+   frankrainrp/Bito @ b0cc94418bc91dc84bf379e06a148a6f89b1bc80. */
+.dui-source-button{
+  position:relative;
+  display:block;
+  width:100%;
+  height:var(--dui-button-height,64px);
+  padding:0;
+  border:0;
+  background:transparent;
+  color:rgba(36,43,51,.949);
+  font-family:var(--dui-font-bold);
+  font-size:14px;
+  text-align:left;
+  outline:none;
+  isolation:isolate;
+  overflow:visible;
+}
+
+.dui-source-button__body{
+  position:absolute;
+  left:15px; right:15px; top:15px; bottom:15px;
+  overflow:visible;
+}
+
+.dui-source-button__base,
+.dui-source-button__focus-shapes{
+  position:absolute; inset:0; pointer-events:none;
+}
+.dui-source-button__piece{position:absolute; top:0; bottom:0; background:transparent;}
+.dui-source-button__piece.tri-down{clip-path:polygon(0 0,50% 100%,100% 0)}
+.dui-source-button__piece.tri-up{clip-path:polygon(0 100%,50% 0,100% 100%)}
+.dui-source-button__piece.half-left{clip-path:polygon(0 0,100% 100%,0 100%)}
+.dui-source-button__piece.half-right{clip-path:polygon(0 0,100% 100%,100% 0)}
+
+/* exact low-alpha base colors from the supplied XAML */
+.dui-source-button__base .p0,.dui-source-button__base .p1,.dui-source-button__base .p5,.dui-source-button__base .p6,.dui-source-button__base .p8,.dui-source-button__base .p9{background:rgba(51,60,77,.047)}
+.dui-source-button__base .p2{background:rgba(51,60,77,.047)}
+.dui-source-button__base .p3,.dui-source-button__base .p4{background:rgba(51,60,77,.016)}
+.dui-source-button__base .p7{background:rgba(51,60,77,.031)}
+
+.dui-source-button__focus-grad{
+  position:absolute; inset:0; opacity:0; pointer-events:none;
+  background:linear-gradient(180deg,#112C42 0%,#0F314D 30%,#163855 35%,#123E61 60%,#113759 95%,#012747 100%);
+}
+.dui-source-button__focus-big{position:absolute;inset:0;background:rgba(42,48,60,0);pointer-events:none}
+.dui-source-button__focus-big-grad{
+  position:absolute;inset:0;opacity:0;pointer-events:none;
+  background:linear-gradient(180deg,#0A101C 0%,rgba(42,48,60,.949) 40%,rgba(42,48,60,0) 60%,rgba(42,48,60,.847) 75%,#0A101C 100%);
+}
+.dui-source-button__press{position:absolute;inset:0;background:#0F1113;opacity:0;pointer-events:none;transition:opacity .1s ease-out}
+
+.dui-source-button__focus-shapes .dui-source-button__piece{background:rgba(245,246,247,0)}
+
+.dui-source-button__grad-top,
+.dui-source-button__grad-bottom{position:absolute;left:15px;right:15px;height:45px;opacity:0;pointer-events:none}
+.dui-source-button__grad-top{top:-30px;background:linear-gradient(180deg,rgba(61,171,245,0),rgba(61,171,245,.122))}
+.dui-source-button__grad-bottom{bottom:-30px;background:linear-gradient(180deg,rgba(61,171,245,.247),rgba(61,171,245,0))}
+
+.dui-source-button__corner{position:absolute;width:8px;height:8px;opacity:0;border-color:rgba(0,0,0,.847);pointer-events:none;z-index:8}
+.dui-source-button__corner.tl{--corner-x:-1;--corner-y:-1;left:0;top:0;border-left:var(--corner-stroke,1px) solid;border-top:var(--corner-stroke,1px) solid}
+.dui-source-button__corner.tr{--corner-x:1;--corner-y:-1;right:0;top:0;border-right:var(--corner-stroke,1px) solid;border-top:var(--corner-stroke,1px) solid}
+.dui-source-button__corner.bl{--corner-x:-1;--corner-y:1;left:0;bottom:0;border-left:var(--corner-stroke,1px) solid;border-bottom:var(--corner-stroke,1px) solid}
+.dui-source-button__corner.br{--corner-x:1;--corner-y:1;right:0;bottom:0;border-right:var(--corner-stroke,1px) solid;border-bottom:var(--corner-stroke,1px) solid}
+
+/* intentionally no mid-left / mid-right / top / bottom square markers */
+
+.dui-source-button__ref-square{position:absolute;left:15px;bottom:-20px;width:6px;height:6px;background:rgba(42,48,60,0);pointer-events:none}
+.dui-source-button__print{position:absolute;left:15px;right:15px;font:400 6px/1 var(--dui-font-thin);color:rgba(51,64,77,.20);pointer-events:none}
+.dui-source-button__print.top{top:-30px}
+.dui-source-button__print.bottom{bottom:-30px}
+
+.dui-source-button__label{position:absolute;inset:0;display:flex;align-items:center;padding:5px 14px 4px;z-index:7}
+.dui-source-button__label.normal{color:rgba(36,43,51,.949)}
+.dui-source-button__label.focus{color:white;opacity:0}
+.dui-source-button__label.press{color:rgba(36,43,51,.949);opacity:0}
+
+.dui-source-button.is-focused:not(.is-acquiring) .dui-source-button__base{opacity:0}
+.dui-source-button.is-focused:not(.is-acquiring) .dui-source-button__focus-grad{opacity:1}
+.dui-source-button.is-focused:not(.is-acquiring) .dui-source-button__grad-top,
+.dui-source-button.is-focused:not(.is-acquiring) .dui-source-button__grad-bottom{opacity:1}
+.dui-source-button.is-focused:not(.is-acquiring) .dui-source-button__label.normal{opacity:0}
+.dui-source-button.is-focused:not(.is-acquiring) .dui-source-button__label.focus{opacity:1}
+.dui-source-button.is-focused:not(.is-acquiring) .dui-source-button__corner{opacity:1}
+.dui-source-button.is-focused:not(.is-acquiring) .dui-source-button__ref-square{background:rgba(42,48,60,.098)}
+.dui-source-button.is-focused:not(.is-acquiring) .dui-source-button__print{text-align:center}
+
+/* stable 7s source cycles */
+.dui-source-button.is-focused:not(.is-acquiring) .focus0,
+.dui-source-button.is-focused:not(.is-acquiring) .focus1{animation:focus01 7s linear infinite}
+.dui-source-button.is-focused:not(.is-acquiring) .focus2{animation:focus2 7s linear infinite}
+.dui-source-button.is-focused:not(.is-acquiring) .focus3{animation:focus3 7s linear infinite}
+.dui-source-button.is-focused:not(.is-acquiring) .focus4{animation:focus4 7s linear infinite}
+.dui-source-button.is-focused:not(.is-acquiring) .focus5{animation:focus5 7s linear infinite}
+.dui-source-button.is-focused:not(.is-acquiring) .focus6{animation:focus6 7s linear infinite}
+.dui-source-button.is-focused:not(.is-acquiring) .focus7{animation:focus7 7s linear infinite}
+.dui-source-button.is-focused:not(.is-acquiring) .focus8,
+.dui-source-button.is-focused:not(.is-acquiring) .focus9{animation:focus89 7s linear infinite}
+@keyframes focus01{0%,100%{background:rgba(245,246,247,.039)}14.285%{background:rgba(245,246,247,.20)}35.714%{background:rgba(245,246,247,.098)}64.285%{background:rgba(245,246,247,.047)}}
+@keyframes focus2{0%,100%{background:rgba(245,246,247,0)}14.285%{background:rgba(245,246,247,.047)}35.714%{background:rgba(245,246,247,.247)}64.285%{background:rgba(245,246,247,.149)}}
+@keyframes focus3{0%,100%{background:rgba(245,246,247,.149)}14.285%{background:rgba(245,246,247,0)}35.714%{background:rgba(245,246,247,.149)}64.285%{background:rgba(245,246,247,.298)}}
+@keyframes focus4{0%,100%{background:rgba(245,246,247,.047)}14.285%{background:rgba(245,246,247,.247)}35.714%{background:rgba(245,246,247,.149)}64.285%{background:rgba(245,246,247,.20)}}
+@keyframes focus5{0%,100%{background:rgba(245,246,247,.047)}14.285%{background:rgba(245,246,247,.20)}35.714%{background:rgba(245,246,247,0)}64.285%{background:rgba(245,246,247,.149)}}
+@keyframes focus6{0%,100%{background:rgba(245,246,247,0)}14.285%{background:rgba(245,246,247,.149)}35.714%{background:rgba(245,246,247,.047)}64.285%{background:rgba(245,246,247,.098)}}
+@keyframes focus7{0%,100%{background:rgba(245,246,247,.20)}14.285%{background:rgba(245,246,247,.047)}35.714%{background:rgba(245,246,247,.149)}64.285%{background:rgba(245,246,247,0)}}
+@keyframes focus89{0%,100%{background:rgba(245,246,247,.047)}14.285%{background:rgba(245,246,247,.098)}35.714%{background:rgba(245,246,247,.20)}64.285%{background:rgba(245,246,247,.098)}}
+
+/* source acquisition: text, corners, gradients, background flashes */
+.dui-source-button.is-acquiring .dui-source-button__base{opacity:0}
+.dui-source-button.is-acquiring .dui-source-button__label.normal{animation:acq-normal-text .35s steps(1,end) both}
+.dui-source-button.is-acquiring .dui-source-button__label.focus{animation:acq-focus-text .35s steps(1,end) both}
+@keyframes acq-normal-text{0%,42.8%{opacity:0}42.9%,57.1%{opacity:1}57.2%,71.3%{opacity:0}71.4%,99.9%{opacity:1}100%{opacity:0}}
+@keyframes acq-focus-text{0%,14.2%{opacity:0}14.3%,28.5%{opacity:.945}28.6%,99.9%{opacity:0}100%{opacity:.945}}
+
+.dui-source-button.is-acquiring .dui-source-button__corner{animation:acq-corner .85s cubic-bezier(.18,.72,.22,1) both}
+@keyframes acq-corner{
+  0%,11.7%{opacity:0;transform:translate(0,0)}11.8%,17.6%{opacity:1}17.7%,52.9%{opacity:0}
+  53%{opacity:1;transform:translate(calc(var(--corner-x) * var(--corner-travel,16px)),calc(var(--corner-y) * var(--corner-travel,16px)))}
+  100%{opacity:1;transform:translate(0,0)}
+}
+
+.dui-source-button.is-acquiring .dui-source-button__focus-grad{animation:acq-focus-grad 3.15s steps(1,end) both}
+@keyframes acq-focus-grad{0%,11.1%{opacity:0}11.11%,100%{opacity:1}}
+.dui-source-button.is-acquiring .dui-source-button__grad-top,
+.dui-source-button.is-acquiring .dui-source-button__grad-bottom{animation:acq-outer-grad 2.85s steps(1,end) both}
+@keyframes acq-outer-grad{0%,12.2%{opacity:0}12.3%,64.8%{opacity:1}64.9%,66.6%{opacity:0}66.7%,70.1%{opacity:1}70.2%,71.9%{opacity:0}72%,98.2%{opacity:1}98.3%,99.9%{opacity:0}100%{opacity:1}}
+.dui-source-button.is-acquiring .dui-source-button__focus-big{animation:acq-big .85s steps(1,end) both}
+@keyframes acq-big{0%,5.8%{background:rgba(42,48,60,0);inset:0}5.9%,11.7%{background:rgba(42,48,60,.949);inset:-4px}11.8%,52.9%{background:rgba(42,48,60,0);inset:0}53%,58.8%{background:rgba(42,48,60,.949)}100%{background:rgba(51,60,77,0)}}
+.dui-source-button.is-acquiring .dui-source-button__focus-big-grad{animation:acq-big-grad 2.85s steps(1,end) both}
+@keyframes acq-big-grad{0%,64.8%{opacity:0}64.9%,66.6%{opacity:1}66.7%,70.1%{opacity:0}70.2%,71.9%{opacity:1}72%,98.2%{opacity:0}98.3%,99.9%{opacity:1}100%{opacity:0}}
+
+/* acquisition focus-shape paths, directly normalized from source timings */
+.dui-source-button.is-acquiring .focus0,.dui-source-button.is-acquiring .focus1{animation:acq-f01 3.15s linear both}
+.dui-source-button.is-acquiring .focus2{animation:acq-f2 3.15s linear both}
+.dui-source-button.is-acquiring .focus3{animation:acq-f3 3.15s linear both}
+.dui-source-button.is-acquiring .focus4{animation:acq-f4 3.15s linear both}
+.dui-source-button.is-acquiring .focus5{animation:acq-f5 3.15s linear both}
+.dui-source-button.is-acquiring .focus6{animation:acq-f6 3.15s linear both}
+.dui-source-button.is-acquiring .focus7{animation:acq-f7 3.15s linear both}
+.dui-source-button.is-acquiring .focus8,.dui-source-button.is-acquiring .focus9{animation:acq-f89 3.15s linear both}
+@keyframes acq-f01{0%,74.6%{background:rgba(245,246,247,0)}90.5%{background:rgba(245,246,247,.098)}100%{background:rgba(245,246,247,.039)}}
+@keyframes acq-f2{0%,12.6%{background:rgba(245,246,247,0)}12.7%,20.6%{background:rgba(245,246,247,.498)}27%{background:rgba(245,246,247,.373)}46%{background:rgba(245,246,247,.149)}74.6%{background:rgba(245,246,247,.40)}90.5%,100%{background:rgba(245,246,247,0)}}
+@keyframes acq-f3{0%,12.6%{background:rgba(245,246,247,0)}12.7%,20.6%{background:rgba(245,246,247,.698)}27%{background:rgba(245,246,247,.522)}46%,58.7%{background:rgba(245,246,247,.078)}77.8%{background:rgba(245,246,247,.498)}90.5%{background:rgba(245,246,247,.40)}100%{background:rgba(245,246,247,.149)}}
+@keyframes acq-f4{0%,58.7%{background:rgba(245,246,247,0)}81%{background:rgba(245,246,247,.60)}90.5%{background:rgba(245,246,247,.20)}100%{background:rgba(245,246,247,.047)}}
+@keyframes acq-f5{0%{background:rgba(245,246,247,0)}46%{background:rgba(245,246,247,.098)}84.1%{background:rgba(245,246,247,.149)}100%{background:rgba(245,246,247,.047)}}
+@keyframes acq-f6{0%{background:rgba(245,246,247,0)}52.4%{background:rgba(245,246,247,.098)}84.1%{background:rgba(245,246,247,.149)}90.5%{background:rgba(245,246,247,.047)}100%{background:rgba(245,246,247,0)}}
+@keyframes acq-f7{0%,7.8%{background:rgba(51,60,77,0)}7.9%,11.1%{background:rgba(51,60,77,.847)}11.2%,19%{background:rgba(51,60,77,0)}19.1%,20.6%{background:rgba(245,246,247,.847)}27%{background:rgba(245,246,247,.631)}46%,61.9%{background:rgba(245,246,247,0)}77.8%{background:rgba(245,246,247,.60)}100%{background:rgba(245,246,247,.20)}}
+@keyframes acq-f89{0%{background:rgba(245,246,247,0)}52.4%{background:rgba(245,246,247,.067)}90.5%{background:rgba(245,246,247,.149)}100%{background:rgba(245,246,247,.047)}}
+
+.dui-source-button.is-acquiring .dui-source-button__ref-square{animation:acq-ref-square .35s linear both}
+@keyframes acq-ref-square{0%,14.2%{background:rgba(42,48,60,0);transform:translateY(calc(var(--corner-travel,16px) / -2))}100%{background:rgba(42,48,60,.098);transform:translateY(0)}}
+.dui-source-button.is-acquiring .dui-source-button__print{animation:acq-print .05s steps(1,end) both}
+@keyframes acq-print{0%{text-align:left}100%{text-align:center}}
+
+.dui-source-button.is-pressed .dui-source-button__press{opacity:1}
+.dui-source-button.is-pressed .dui-source-button__grad-top,
+.dui-source-button.is-pressed .dui-source-button__grad-bottom{opacity:0!important}
+.dui-source-button.is-pressed .dui-source-button__label.focus{opacity:0!important}
+.dui-source-button.is-pressed .dui-source-button__label.press{opacity:1}
+.dui-source-button.is-pressed .dui-source-button__corner{
+  opacity:1;
+  transform:translate(calc(-1 * var(--corner-x) * var(--corner-press,2px)),calc(-1 * var(--corner-y) * var(--corner-press,2px)))!important;
+  transition:transform .1s cubic-bezier(.215,.61,.355,1)
+}
+
+.dui-source-button.is-unfocusing .dui-source-button__corner{animation:unfocus-corner .4s ease-out both}
+@keyframes unfocus-corner{from{opacity:1}to{opacity:0}}
+
+.dui-source-button:disabled{pointer-events:none}
+.dui-source-button:disabled .dui-source-button__label.normal{color:rgba(36,43,51,.898)}
+
+/* requested page-entry flash kept as a library-level behavior */
+.dui-source-button.is-intro .dui-source-button__base{animation:intro-base 1.2s steps(1,end) both}
+@keyframes intro-base{0%,16%{filter:brightness(1)}17%,25%{filter:brightness(2.4)}26%,45%{filter:brightness(1)}46%,50%{filter:brightness(2.3)}51%,100%{filter:brightness(1)}}
+
+
+/* Butler hosts the original layers inside a React Native Web Pressable. */
+.dui-source-button.butler-source-button{
+  position:absolute;
+  inset:0;
+  width:auto;
+  height:auto;
+  pointer-events:none;
+}
+.butler-source-button .dui-source-button__label{
+  padding:0;
+  justify-content:center;
+}
+.butler-tab-button .dui-source-button__body{overflow:hidden}
+.butler-source-button.is-pressed .dui-source-button__label.normal{opacity:0}
+
+/* Desktop controls that do not already own the Detroit button animation. */
+[data-testid="desktop-workspace"] :is(button, [role="button"], [role="switch"], [role="tab"]):focus-visible {
+  outline: 2px solid #1371bf;
+  outline-offset: 2px;
+}
+[data-testid="desktop-workspace"] :is(button, [role="button"], [role="switch"]):not(:has(.butler-source-button)):not(:disabled, [aria-disabled="true"]) {
+  transition: filter 115ms ease-out, translate 115ms ease-out;
+}
+@media (hover: hover) {
+  [data-testid="desktop-workspace"] :is(button, [role="button"], [role="switch"]):not(:has(.butler-source-button)):not(:disabled, [aria-disabled="true"]):hover {
+    filter: brightness(.94);
+  }
+}
+[data-testid="desktop-workspace"] :is(button, [role="button"], [role="switch"]):not(:has(.butler-source-button)):not(:disabled, [aria-disabled="true"]):active {
+  filter: brightness(.87);
+  translate: 0 1px;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-testid="desktop-workspace"] :is(button, [role="button"], [role="switch"]):not(:has(.butler-source-button)):not(:disabled, [aria-disabled="true"]) {
+    transition: none;
+    translate: none;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .butler-source-button *, .butler-source-button.is-focused *{animation:none!important;transition:none!important}
+  .butler-source-button.is-acquiring .dui-source-button__focus-grad,
+  .butler-source-button.is-acquiring .dui-source-button__grad-top,
+  .butler-source-button.is-acquiring .dui-source-button__grad-bottom,
+  .butler-source-button.is-acquiring .dui-source-button__corner,
+  .butler-source-button.is-acquiring .dui-source-button__label.focus{opacity:1}
+  .butler-source-button.is-acquiring .dui-source-button__label.normal{opacity:0}
+}

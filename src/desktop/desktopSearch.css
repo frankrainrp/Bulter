@@ -1,0 +1,49 @@
+.butler-workspace-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: clamp(165px, 21vw, 260px);
+  min-width: 0;
+  margin-left: auto;
+  padding: 0 12px;
+  border-radius: 5px;
+  background: #edf2f4;
+  color: #242b33;
+  font-family: LarkeThin, system-ui, sans-serif;
+}
+.butler-workspace-search:focus-within { outline: 2px solid #1371bf; outline-offset: 2px; }
+.butler-workspace-search input {
+  width: 100%; min-width: 0; height: 34px; padding: 0; border: 0; outline: 0;
+  background: transparent; color: #242b33; font: inherit; font-size: 14px;
+}
+.butler-workspace-search input::placeholder { color: #4a5a6b; opacity: 1; }
+.butler-workspace-search > span { display: flex; }
+.butler-workspace-search kbd {
+  flex: none; color: #4a5a6b; font: 11px ui-monospace, monospace; white-space: nowrap;
+}
+@media (max-width: 1140px) { .butler-workspace-search kbd { display: none; } }
+.butler-search-popup {
+  z-index: 20; position: absolute; top: calc(100% + 6px); right: 0;
+  display: flex; flex-direction: column; width: min(340px, 70vw); max-height: min(420px, 55vh);
+  background: #fafafa; color: #242b33; box-shadow: 0 8px 20px rgba(36,43,51,.12);
+}
+.butler-search-popup [role="listbox"] { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.butler-search-pages { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: #edf2f4; }
+.butler-search-pages span { flex: 1; font-size: 13px; color: #4a5a6b; }
+.butler-search-pages button { min-height: 32px; padding: 3px 8px; border: 0; color: #195c89; background: transparent; font: 13px LarkeBold, system-ui, sans-serif; cursor: pointer; }
+.butler-search-pages button:disabled { color: #626c73; cursor: default; }
+.butler-search-pages button:enabled:hover { background: #dce8ee; }
+.butler-search-pages button:focus-visible { outline: 2px solid #1371bf; outline-offset: -2px; }
+@media (forced-colors: active) {
+  .butler-search-pages button:focus-visible { outline-color: Highlight; }
+  .butler-search-pages button:disabled { color: GrayText; }
+}
+.butler-search-result { display: grid; gap: 3px 8px; grid-template-columns: 38px minmax(0, 1fr); padding: 9px 12px; cursor: pointer; }
+.butler-search-result[aria-selected=true] { background: #e4eef3; }
+.butler-search-result small { color: #4a5a6b; align-self: center; font-size: 12px; }
+.butler-search-result strong, .butler-search-result span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.butler-search-result strong { font: 14px LarkeBold, system-ui, sans-serif; }
+.butler-search-result span { grid-column: 2; color: #4a5a6b; font-size: 13px; }
+.butler-search-result mark { background: #d5e8f3; color: #123952; }
+.butler-search-popup p { margin: 0; padding: 14px; }

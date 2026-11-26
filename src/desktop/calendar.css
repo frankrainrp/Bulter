@@ -1,0 +1,217 @@
+.butler-desktop-calendar {
+  --dui-color-navy: #2b526d;
+  --dui-color-source-blue: #1371bf;
+  --dui-color-paper-bright: #fafafa;
+  --calendar-ink: #242b33;
+  --calendar-muted: #4a5a6b;
+  --calendar-soft: #e4eef3;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  color: var(--calendar-ink);
+  font-family: LarkeThin, system-ui, sans-serif;
+}
+.butler-desktop-calendar button { font-family: LarkeBold, system-ui, sans-serif; }
+.butler-calendar-rail, .butler-calendar-workspace { overflow-y: auto; min-height: 0; }
+.butler-calendar-rail { background: rgba(250,250,250,.84); padding: 16px 12px; }
+.butler-calendar-workspace { container: butler-planner / inline-size; padding: 20px 24px 32px; }
+.butler-calendar-views { margin: 0 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.butler-calendar-views > :first-child { margin: 0; }
+.butler-calendar-mini { margin-bottom: 18px; }
+.butler-calendar-mini header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+.butler-calendar-mini h2 { margin: 0; font: 15px/1.3 LarkeBold, system-ui, sans-serif; }
+.butler-calendar-mini .dui-nav { width: 32px; min-width: 32px; height: 36px; border: 0; }
+.butler-calendar-mini-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); }
+.butler-calendar-mini-grid > span { font: 11px/25px LarkeBold, system-ui, sans-serif; text-align: center; color: var(--calendar-muted); }
+.butler-calendar-mini-grid button { position: relative; min-width: 0; height: 28px; padding: 0; border: 0;
+  background: transparent; color: var(--calendar-ink); cursor: pointer; font-size: 13px; }
+.butler-calendar-mini-grid button[data-outside="true"] { color: var(--calendar-muted); }
+.butler-calendar-mini-grid button[aria-current="date"] { color: var(--dui-color-source-blue); }
+.butler-calendar-mini-grid button:hover { background: var(--calendar-soft); }
+.butler-calendar-mini-grid button[aria-pressed="true"] { background: var(--dui-color-navy); color: white; }
+.butler-calendar-mini-grid button[data-marked="true"]::after { content: ""; display: block; position: absolute;
+  bottom: 2px; left: calc(50% - 2px); width: 4px; height: 3px; background: currentColor; }
+.butler-calendar-mini button:disabled { opacity: .35; cursor: default; }
+.butler-calendar-columns { display: grid; align-items: start; gap: 24px; }
+.butler-calendar-primary, .butler-calendar-agenda { min-width: 0; }
+.butler-calendar-agenda { display: grid; gap: 12px; }
+@container butler-planner (min-width: 760px) {
+  .butler-calendar-columns:not([data-view="week"]) { grid-template-columns: minmax(0, 1fr) minmax(235px, 29%); }
+}
+@container butler-planner (min-width: 975px) {
+  .butler-calendar-columns[data-view="week"] { grid-template-columns: minmax(0, 1fr) minmax(235px, 25%); }
+}
+
+.bito-calendar.butler-calendar-month .dui-calendar__day { min-height: 102px; }
+.butler-calendar-month .dui-calendar__day.is-idle:not(.is-selected) { color: var(--calendar-ink); }
+.butler-calendar-month .dui-calendar__day.is-outside:not(:disabled) {
+  opacity: 1;
+  background: #f1f4f5;
+  color: var(--calendar-muted);
+}
+/* Bito's hover state changes independently from the date selected in the agenda. */
+.bito-calendar.butler-calendar-month .dui-calendar__day[aria-pressed="true"] {
+  color: var(--dui-color-source-blue);
+  background: rgba(var(--dui-rgb-source-blue), .10);
+}
+.bito-calendar.butler-calendar-month .dui-calendar__day[aria-pressed="true"]::before,
+.bito-calendar.butler-calendar-month .dui-calendar__day[aria-pressed="true"]::after {
+  border-color: var(--dui-color-source-blue);
+  border-width: 2px;
+}
+.butler-calendar-month .dui-calendar__day:disabled { pointer-events: none; }
+@media (forced-colors: active) {
+  .bito-calendar.butler-calendar-month .dui-calendar__day[aria-pressed="true"] { border: 2px solid Highlight; }
+}
+.butler-calendar-day-cell { position: relative; min-width: 0; }
+.butler-calendar-day-cell > .dui-calendar__day { width: 100%; height: 100%; }
+.butler-calendar-day-cell .dui-calendar__marker { display: none; }
+.butler-calendar-previews {
+  position: absolute;
+  display: grid;
+  top: 33px;
+  left: 5px;
+  right: 5px;
+  gap: 2px;
+  font: 11px/14px LarkeBold, system-ui, sans-serif;
+  color: var(--dui-color-navy);
+  pointer-events: none;
+}
+.butler-calendar-previews small { padding-inline: 3px; font: inherit; }
+.butler-calendar-entry {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--calendar-soft);
+  padding-inline: 3px;
+}
+button.butler-calendar-entry {
+  border: 0;
+  padding-block: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+button.butler-calendar-entry:hover { background: #d0e2ed; }
+.butler-calendar-entry.is-complete, .butler-calendar-event[data-done="true"] {
+  color: var(--calendar-muted);
+  text-decoration: line-through;
+}
+
+.butler-calendar-planner {
+  padding: clamp(10px, 2cqw, 22px);
+  background: var(--dui-color-paper-bright);
+}
+.butler-calendar-planner-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+.butler-calendar-planner-head h2, .butler-calendar-upcoming h2 {
+  font: 20px/1.22 LarkeBold, system-ui, sans-serif;
+  color: var(--calendar-ink);
+  margin: 0;
+}
+.butler-calendar-planner-head p { font-size: 13px; margin: 5px 0 0; color: var(--calendar-muted); }
+.butler-calendar-planner-nav { display: flex; align-items: center; }
+.butler-calendar-planner-nav .dui-nav { border: 0; }
+.butler-calendar-planner-nav .dui-nav:disabled { opacity: .35; cursor: default; }
+.butler-calendar-today, .butler-calendar-date, .butler-calendar-upcoming button {
+  border: 0;
+  background: transparent;
+  color: var(--dui-color-navy);
+  cursor: pointer;
+}
+.butler-calendar-today { min-height: 44px; padding-inline: 8px; }
+.butler-desktop-calendar button:focus-visible {
+  outline: 2px solid var(--dui-color-source-blue);
+  outline-offset: -2px;
+}
+.butler-calendar-timeline {
+  width: 100%;
+  table-layout: fixed;
+  border-spacing: 2px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.butler-calendar-timeline th { font-weight: normal; }
+.butler-calendar-timeline thead th:first-child { width: 49px; }
+.butler-calendar-timeline tbody th {
+  padding-right: 6px;
+  font: 12px LarkeBold, system-ui, sans-serif;
+  text-align: right;
+  color: var(--calendar-muted);
+}
+.butler-calendar-timeline td {
+  position: relative;
+  vertical-align: middle;
+  height: 44px;
+  padding: 0 3px;
+  background: #f1f4f5;
+}
+.butler-calendar-timeline td[data-selected="true"] { background: #edf3f7; }
+.butler-calendar-timeline td[data-drop="true"] { background: #bbced8; }
+.butler-calendar-date { display: grid; justify-items: center; gap: 2px; width: 100%; min-height: 49px; padding: 4px; }
+.butler-calendar-date span { font-size: 12px; color: var(--calendar-muted); }
+.butler-calendar-date strong { font-size: 17px; font-weight: normal; }
+.butler-calendar-date[aria-current="date"] { color: var(--dui-color-source-blue); background: var(--calendar-soft); }
+.butler-calendar-day-heading { font: 14px LarkeBold, system-ui, sans-serif; color: var(--calendar-muted); }
+.butler-calendar-add-slot {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  cursor: cell;
+  color: var(--dui-color-navy);
+  font-size: 20px;
+  text-align: right;
+}
+.butler-calendar-add-slot span { opacity: 0; }
+.butler-calendar-add-slot:is(:hover, :focus-visible) { background: var(--calendar-soft); }
+.butler-calendar-add-slot:is(:hover, :focus-visible) span { opacity: 1; }
+.butler-calendar-event {
+  display: block;
+  position: relative;
+  width: 100%;
+  min-height: 28px;
+  margin-block: 2px;
+  border: 0;
+  padding: 4px;
+  text-align: left;
+  color: #18364c;
+  background: #d9e7ef;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.butler-calendar-event time { padding-right: 4px; }
+.butler-calendar-event[draggable="true"] { cursor: grab; }
+.butler-calendar-event[draggable="true"]:active { cursor: grabbing; }
+.butler-calendar-upcoming { padding: 8px 4px; }
+.butler-calendar-upcoming h2 { font-size: 18px; margin-bottom: 8px; }
+.butler-calendar-upcoming button {
+  display: grid;
+  grid-template-columns: 57px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  text-align: left;
+  min-height: 42px;
+  width: 100%;
+  padding: 9px 4px;
+  font-size: 14px;
+}
+.butler-calendar-upcoming time { font: 13px LarkeThin, system-ui, sans-serif; color: var(--calendar-muted); }
+.butler-calendar-upcoming span { overflow-wrap: anywhere; }
+.butler-calendar-upcoming button:hover, .butler-calendar-date:hover, .butler-calendar-today:hover {
+  background: var(--calendar-soft);
+}

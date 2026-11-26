@@ -1,0 +1,64 @@
+@media (forced-colors: active) and (min-width: 900px) {
+  [data-testid="page-background"] { display: none; }
+  [data-testid="desktop-brand-logo"] {
+    /* The supplied black artwork has a transparent ground. */
+    forced-color-adjust: none;
+    background-color: white;
+  }
+  /* On a forced Canvas, decorative offset lettering becomes a second opaque word. */
+  [data-testid="desktop-workspace"] [data-testid="detroit-title-projection"],
+  .butler-desktop-calendar .dui-calendar__day-label::after {
+    display: none;
+  }
+
+  /* These arrows and event dots are silhouettes drawn with a CSS background. */
+  .butler-desktop-calendar .dui-nav::before,
+  .butler-calendar-mini-grid button[data-marked="true"]::after {
+    forced-color-adjust: none;
+    background: ButtonText;
+  }
+  .butler-calendar-mini-grid button[aria-pressed="true"],
+  .butler-desktop-calendar .dui-calendar__day.is-selected {
+    border: 2px solid Highlight;
+  }
+
+  [data-testid="desktop-workspace"] :is([role="tab"], [role="button"])[aria-selected="true"],
+  .vault-modes button[aria-pressed="true"] {
+    text-decoration: underline;
+    text-underline-offset: .22em;
+  }
+  .butler-search-result[aria-selected="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+
+  /* SVG presentation attributes retain their authored colors on some engines. */
+  [data-testid="desktop-workspace"] .agent-orb-mark svg,
+  [data-testid="desktop-workspace"] [role="tab"] svg {
+    forced-color-adjust: none;
+    color: ButtonText;
+  }
+  .agent-orb-mark svg path[fill]:not([fill="none"]) { fill: ButtonText; }
+  [data-testid="desktop-workspace"] [role="tab"] svg [stroke]:not([stroke="none"]) {
+    stroke: ButtonText;
+  }
+}
+
+@media (forced-colors: active) {
+  .agent-robot-mark svg *[fill]:not([fill="none"]) { fill: ButtonText; }
+  .agent-robot-mark svg *[stroke]:not([stroke="none"]) { stroke: ButtonText; }
+  :is([data-testid="desktop-agent-reply"], [data-testid="mobile-agent-reply"]) {
+    forced-color-adjust: none;
+    color: ButtonText;
+    background-color: ButtonFace;
+    border: 1px solid currentColor;
+  }
+  :is([data-testid="desktop-agent-reply"], [data-testid="mobile-agent-reply"]):is([aria-disabled="true"], :disabled) {
+    color: GrayText;
+    opacity: 1;
+  }
+  :is([data-testid="desktop-agent-reply"], [data-testid="mobile-agent-reply"]) .dui-source-button__body > :not(.dui-source-button__label) { visibility: hidden; }
+  :is([data-testid="desktop-agent-reply"], [data-testid="mobile-agent-reply"]) svg [stroke]:not([stroke="none"]) { stroke: currentColor; }
+  :is([data-testid="desktop-agent-reply"], [data-testid="mobile-agent-reply"]) svg rect { fill: currentColor; }
+  :is([data-testid="desktop-agent-reply"], [data-testid="mobile-agent-reply"]) :is(svg, .dui-source-button__label) { color: inherit; }
+}

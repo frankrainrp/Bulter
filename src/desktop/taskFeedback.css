@@ -1,0 +1,82 @@
+.desktop-task-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 3px;
+  background: #fafafa;
+}
+.desktop-task-row[data-selected="true"] { background: #e4eef3; }
+.desktop-task-row[data-done="true"] { background: #edf1f1; }
+.desktop-task-row[data-phase="highlight"] { animation: task-complete-glow 360ms ease-out both; }
+.desktop-task-row.desktop-agenda-task {
+  display: block;
+  margin: 0;
+  background: transparent;
+}
+.desktop-agenda-task[data-done="true"] { background: rgba(94, 153, 132, .14); }
+.desktop-agenda-task[data-phase="highlight"] { animation-name: agenda-complete-glow; }
+.desktop-task-toggle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.desktop-task-toggle:focus-visible, .desktop-task-sound:focus-visible {
+  outline: 2px solid #1371bf;
+  outline-offset: -2px;
+}
+.desktop-task-check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  background: #bbced8;
+  color: white;
+}
+.desktop-task-toggle[aria-checked="true"] .desktop-task-check { background: #44746c; }
+.desktop-task-row[data-phase="draw"] .desktop-task-check,
+.desktop-task-row[data-phase="highlight"] .desktop-task-check { background: #1371bf; }
+.desktop-task-row[data-phase="draw"] .desktop-task-mark { animation: task-check-draw 200ms ease-out both; }
+.desktop-task-sound {
+  align-self: flex-start;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: #4a5a6b;
+  font: 13px/18px LarkeThin, sans-serif;
+  cursor: pointer;
+}
+.desktop-task-status {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  z-index: 3;
+  max-width: min(420px, 85%);
+  pointer-events: none;
+}
+.desktop-task-added {
+  padding: 12px 16px;
+  background: #e0eee8;
+  color: #264e43;
+  font: 15px/1.4 LarkeBold, sans-serif;
+  overflow-wrap: anywhere;
+  animation: task-added-in 180ms ease-out both;
+}
+@keyframes task-check-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes task-complete-glow { from { background: #d1e8e5; } to { background: #edf1f1; } }
+@keyframes agenda-complete-glow { from { background: rgba(144, 215, 192, .31); } to { background: rgba(94, 153, 132, .14); } }
+@keyframes task-added-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .desktop-task-row[data-phase], .desktop-task-row[data-phase] .desktop-task-mark, .desktop-task-added { animation: none; }
+}
+@media (forced-colors: active) {
+  .desktop-task-check { forced-color-adjust: none; box-sizing: border-box; background: Canvas; border: 2px solid ButtonText; }
+  .desktop-task-toggle[aria-checked="true"] .desktop-task-check { background: Highlight; color: HighlightText; border-color: Highlight; }
+  .desktop-task-toggle:focus-visible, .desktop-task-sound:focus-visible { outline-color: Highlight; }
+  [data-testid="desktop-tasks"] .dui-progress__svg { color: Highlight; forced-color-adjust: none; outline: 1px solid GrayText; }
+  [data-testid="desktop-tasks"] .dui-progress__scan { display: none; }
+}

@@ -1,0 +1,40 @@
+.reply-markdown {
+  min-width: 0;
+  max-width: 100%;
+  color: #242b33;
+  font: 15px/1.62 LarkeThin, system-ui, sans-serif;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.reply-markdown :is(p, ul, ol, blockquote, pre) { margin: .65em 0; }
+.reply-markdown > :first-child { margin-top: 0; }
+.reply-markdown > :last-child { margin-bottom: 0; }
+.reply-markdown .reply-plain { white-space: pre-wrap; }
+.reply-markdown[aria-busy="true"] { visibility: hidden; }
+.reply-format-failure summary { cursor: pointer; }
+.reply-format-failure pre { padding: 10px 12px; max-height: 34rem; overflow: auto; }
+.reply-markdown :is(h1, h2, h3, h4, h5, h6) { margin: 1em 0 .35em; line-height: 1.28; }
+.reply-markdown :is(h1, h2, h3, h4, h5, h6, strong, b) { font-family: LarkeBold, system-ui, sans-serif; font-weight: normal; }
+.reply-markdown h1 { font-size: 1.45em; }
+.reply-markdown h2 { font-size: 1.28em; }
+.reply-markdown h3 { font-size: 1.14em; }
+.reply-markdown :is(h4, h5, h6) { font-size: 1em; }
+.reply-markdown :is(ol, ul) { padding-inline-start: 1.6em; }
+.reply-markdown li + li { margin-top: .16em; }
+.reply-markdown blockquote { padding: .3em 1em; background: #edf2f4; }
+.reply-markdown a { color: #195c89; text-underline-offset: .16em; }
+.reply-markdown code { font: .88em/1.5 ui-monospace, Consolas, monospace; background: #eaf0f2; padding: .12em .27em; }
+.reply-code { margin: .85em 0; min-width: 0; max-width: 100%; background: #edf2f4; }
+.reply-code-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 5px 9px; background: #e2eaed; }
+.reply-code-language { margin-right: auto; overflow-wrap: anywhere; font: 13px LarkeBold, system-ui, sans-serif; }
+.reply-code-modes { display: inline-flex; }
+.reply-code-tools button { min-height: 32px; border: 0; background: transparent; color: #244c63; padding: 4px 8px; font: 13px LarkeBold, system-ui, sans-serif; cursor: pointer; }
+.reply-code-tools button:is(:hover, [aria-pressed="true"]) { background: #d0dee5; color: #18364c; }
+.reply-markdown :is(a, button, pre):focus-visible { outline: 2px solid #1371bf; outline-offset: -2px; }
+.reply-code pre { margin: 0; padding: 10px 12px; max-height: 34rem; overflow: auto; }
+.reply-code pre code { background: transparent; padding: 0; white-space: pre; overflow-wrap: normal; }
+.reply-svg-image { display: grid; place-items: center; padding: 12px; background: #fafafa; }
+.reply-svg-image[hidden] { display: none; }
+.reply-svg-image img { display: block; max-width: 100%; height: auto; max-height: 24rem; object-fit: contain; }
+.reply-code-status { display: block; padding: 4px 12px 8px; color: #455762; font-size: 13px; }
+.reply-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

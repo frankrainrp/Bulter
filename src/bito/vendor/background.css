@@ -1,0 +1,31 @@
+.dui-background{
+  position:fixed;
+  inset:0;
+  z-index:-10;
+  pointer-events:none;
+  overflow:hidden;
+  background:linear-gradient(180deg,#F8F9F9 0%,#F1F3F3 54%,#F7F8F8 100%);
+}
+.dui-background-root{isolation:isolate}
+:where(.dui-background-root:not(body)){
+  position:relative;
+  min-block-size:100vh;
+  min-block-size:100dvh;
+}
+.dui-background-root:not(body) > .dui-background{position:absolute}
+.dui-background__svg{position:absolute;inset:-2%;width:104%;height:104%;overflow:visible}
+.dui-background__band{fill:rgba(255,255,255,.34)}
+.dui-background__layer{transform-origin:800px 450px}
+.dui-background__layer--a{animation:dui-bg-parallax-a 18s ease-in-out infinite alternate}
+.dui-background__layer--b{animation:dui-bg-parallax-b 23s ease-in-out infinite alternate}
+.dui-background__phase{animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-direction:alternate}
+.dui-background__phase--1{animation-name:dui-bg-phase-1;animation-duration:7.8s}
+.dui-background__phase--2{animation-name:dui-bg-phase-2;animation-duration:9.1s}
+.dui-background__phase--3{animation-name:dui-bg-phase-3;animation-duration:10.4s}
+.dui-background__facet{fill:#D5DDE2}
+@keyframes dui-bg-phase-1{from{opacity:.72}to{opacity:1}}
+@keyframes dui-bg-phase-2{from{opacity:1}to{opacity:.68}}
+@keyframes dui-bg-phase-3{from{opacity:.82}to{opacity:.54}}
+@keyframes dui-bg-parallax-a{from{transform:translate3d(-4px,0,0) scale(1)}to{transform:translate3d(12px,-5px,0) scale(1.01)}}
+@keyframes dui-bg-parallax-b{from{transform:translate3d(8px,-4px,0) scale(1.005)}to{transform:translate3d(-14px,6px,0) scale(1.015)}}
+@media(prefers-reduced-motion:reduce){.dui-background__layer,.dui-background__phase{animation:none!important}}

@@ -1,0 +1,136 @@
+/* Extracted from Bito b0cc94418bc91dc84bf379e06a148a6f89b1bc80, familyos/static/detroit-ui.css. */
+.dui-nav{
+  --dui-nav-size:34px;
+  position:relative;
+  width:var(--dui-nav-size);
+  height:var(--dui-nav-size);
+  display:inline-grid;
+  place-items:center;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:rgba(var(--dui-rgb-ink),.34);
+  cursor:pointer;
+  outline:none;
+}
+.dui-nav::before{content:"";position:absolute;pointer-events:none;transition:opacity .16s linear,transform .22s var(--dui-motion-focus-ease)}
+.dui-nav::before{width:16px;height:13.856px;background:currentColor;clip-path:polygon(0 0,100% 50%,0 100%);opacity:.56}
+.dui-nav[data-direction="prev"]::before{transform:rotate(180deg)}
+.dui-nav.is-focus,.dui-nav:hover,.dui-nav:focus-visible{color:var(--dui-color-source-blue)}
+.dui-nav.is-focus::before,.dui-nav:hover::before,.dui-nav:focus-visible::before{opacity:1}
+.dui-nav.is-disabled{opacity:.3;pointer-events:none}
+
+.dui-nav{--dui-nav-size:44px;color:var(--dui-color-navy);border:1px solid var(--dui-color-blue-gray);background:var(--dui-color-paper-bright)}
+.dui-nav::before{opacity:1}
+.dui-nav:focus-visible{outline:2px solid var(--dui-color-source-blue);outline-offset:3px}
+
+/* --- src/components/calendar.css --- */
+.dui-calendar{
+  --dui-calendar-gap:8px;
+  display:grid;
+  gap:18px;
+  color:var(--dui-color-ink);
+}
+.dui-calendar__head{display:flex;align-items:end;justify-content:space-between;gap:20px}
+.dui-calendar__meta{display:grid;gap:6px}
+.dui-calendar__title{font:700 24px/1 var(--dui-font-bold);letter-spacing:.01em}
+.dui-calendar__sub{font:10px/1.4 var(--dui-font-thin);color:rgba(var(--dui-rgb-ink),.34)}
+.dui-calendar__nav{display:flex;gap:6px}
+.dui-calendar__weekdays,.dui-calendar__grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--dui-calendar-gap)}
+.dui-calendar__weekday{text-align:center;font:10px/1 var(--dui-font-bold);color:rgba(var(--dui-rgb-ink),.32)}
+.dui-calendar__day{
+  --day-corner:10px;
+  position:relative;
+  min-width:0;
+  min-height:72px;
+  border:0;
+  background:rgba(255,255,255,.10);
+  padding:12px 14px;
+  text-align:left;
+  outline:none;
+  color:rgba(var(--dui-rgb-ink),.52);
+}
+.dui-calendar__day::before,.dui-calendar__day::after{
+  content:"";
+  position:absolute;
+  width:var(--day-corner);
+  height:var(--day-corner);
+  border-color:rgba(var(--dui-rgb-ink),.17);
+  transition:border-color .16s linear,transform .22s var(--dui-motion-focus-ease),opacity .16s linear;
+}
+.dui-calendar__day::before{left:0;top:0;border-left:1px solid;border-top:1px solid}
+.dui-calendar__day::after{right:0;bottom:0;border-right:1px solid;border-bottom:1px solid}
+.dui-calendar__day-label{
+  position:relative;
+  display:inline-grid;
+  align-items:start;
+  justify-items:start;
+  font-family:var(--dui-font-bold);
+  font-size:19px;
+  line-height:1;
+  letter-spacing:.01em;
+  color:currentColor;
+}
+.dui-calendar__day-label::after{
+  content:attr(data-label);
+  grid-area:1/1;
+  transform:translate(4px,3px);
+  color:rgba(var(--dui-rgb-ink),.075);
+  pointer-events:none;
+}
+.dui-calendar__day-label__main{grid-area:1/1;position:relative;z-index:1}
+.dui-calendar__day.is-outside{opacity:.30}
+.dui-calendar__day.is-focus:not(.is-active),.dui-calendar__day:hover:not(.is-active){color:var(--dui-color-source-blue);background:rgba(var(--dui-rgb-source-blue),.025)}
+.dui-calendar__day.is-focus::before,.dui-calendar__day.is-focus::after,.dui-calendar__day:hover::before,.dui-calendar__day:hover::after{border-color:rgba(var(--dui-rgb-source-blue),.58)}
+.dui-calendar__day.is-active{color:var(--dui-color-source-blue);background:rgba(var(--dui-rgb-source-blue),.075)}
+.dui-calendar__day.is-active::before,.dui-calendar__day.is-active::after{border-color:var(--dui-color-source-blue);opacity:.92}
+.dui-calendar__marker{position:absolute;right:15px;bottom:13px;width:5px;height:5px;background:var(--dui-color-source-blue);opacity:.72}
+@media(max-width:760px){
+  .dui-calendar{--dui-calendar-gap:4px}
+  .dui-calendar__title{font-size:20px}
+  .dui-calendar__day{min-height:58px;padding:10px 11px}
+  .dui-calendar__day-label{font-size:16px}
+}
+
+/* Bito's family calendar states, with C346's compact sizing and system fonts. */
+.bito-calendar{
+  --dui-rgb-ink:36,43,51;
+  --dui-rgb-source-blue:19,113,191;
+  --dui-color-ink:#242B33;
+  --dui-color-source-blue:#1371BF;
+  --dui-color-navy:#2B526D;
+  --dui-color-paper-bright:#FAFAFA;
+  --dui-font-bold:LarkeBold,system-ui,sans-serif;
+  --dui-font-thin:LarkeThin,system-ui,sans-serif;
+  --dui-motion-focus-ease:cubic-bezier(.18,.72,.22,1);
+  --dui-calendar-gap:4px;
+  gap:12px;
+  min-width:0;
+}
+.bito-calendar .dui-calendar__sub,.bito-calendar .dui-calendar__weekday{color:#4A5A6B}
+.bito-calendar .dui-calendar__day{min-height:56px;padding:8px 9px;vertical-align:top}
+.bito-calendar .dui-calendar__day-label{position:absolute;top:8px;left:9px;font-weight:700}
+.bito-calendar .calendar-reel{position:absolute;top:8px;left:9px;right:0;height:26px;overflow:hidden;pointer-events:none}
+.bito-calendar .calendar-reel>.dui-calendar__day-label{position:absolute;top:0;left:0}
+.bito-calendar .calendar-reel-title{position:relative;inset:auto;display:block;height:1em}
+.bito-calendar .calendar-reel-title>span{position:absolute;top:0;left:0;white-space:nowrap}
+.bito-calendar .calendar-reel-outgoing{pointer-events:none}
+.bito-calendar .dui-calendar__day.is-today .dui-calendar__day-label__main{color:var(--dui-color-source-blue)}
+.bito-calendar .dui-calendar__day.is-selected{color:var(--dui-color-source-blue);background:rgba(var(--dui-rgb-source-blue),.10)}
+.bito-calendar .dui-calendar__day.is-selected::before,.bito-calendar .dui-calendar__day.is-selected::after,
+.bito-calendar .dui-calendar__day:focus-visible::before,.bito-calendar .dui-calendar__day:focus-visible::after{border-color:var(--dui-color-source-blue);border-width:2px}
+.bito-calendar .dui-calendar__day:disabled{cursor:default}
+.bito-calendar .dui-nav{border:0}
+.bito-calendar .dui-nav:focus-visible{background:#E4EEF3}
+.bito-calendar .dui-nav:disabled{opacity:.3;cursor:default}
+@media(max-width:760px){
+  .bito-calendar{gap:8px}
+  .bito-calendar .dui-calendar__day{min-height:46px;padding:6px}
+  .bito-calendar .dui-calendar__day-label{top:6px;left:6px}
+  .bito-calendar .calendar-reel:not(.calendar-reel-title){top:6px;left:6px;height:22px}
+  .bito-calendar .dui-calendar__marker{right:8px;bottom:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  .bito-calendar .dui-calendar__day::before,.bito-calendar .dui-calendar__day::after,
+  .bito-calendar .dui-nav::before{transition:none}
+}

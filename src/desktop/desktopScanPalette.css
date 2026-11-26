@@ -1,0 +1,12 @@
+.dui-screen-transition--center {
+  --dui-color-focus-100: #012747;
+  --dui-color-navy-black: #18364c;
+  --dui-color-navy-deep: #21445e;
+  --dui-color-navy: #2b526d;
+  --dui-color-blue-deep: #35627f;
+  --dui-color-blue: #467b99;
+  --dui-color-blue-bright: #6798b3;
+  --dui-color-blue-soft: #91b3c5;
+  --dui-color-blue-gray: #bbced8;
+  --dui-color-blue-pale: #e4eef3;
+}
